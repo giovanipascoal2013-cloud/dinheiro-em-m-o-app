@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
-import { Search, MapPin, SlidersHorizontal, Star, X } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, Star, X, Map, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { ZoneCard } from '@/components/ZoneCard';
+import { ZonesMap } from '@/components/ZonesMap';
 import { Button } from '@/components/ui/button';
 import { mockZones, mockCurrentUser, isUserSubscribed } from '@/data/mockData';
 import logoIcon from '@/assets/logo-icon.png';
@@ -21,6 +22,7 @@ const Index = () => {
   const [selectedCity, setSelectedCity] = useState('Todas');
   const [sortBy, setSortBy] = useState('rating');
   const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
 
   const filteredZones = useMemo(() => {
     let zones = [...mockZones];
@@ -125,6 +127,34 @@ const Index = () => {
               <SlidersHorizontal className="h-3.5 w-3.5" />
               Ordenar
             </button>
+
+            <div className="h-6 w-px bg-border mx-1" />
+
+            {/* View toggle */}
+            <div className="flex items-center bg-muted rounded-full p-1">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-full transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Ver em grelha"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('map')}
+                className={`p-2 rounded-full transition-all ${
+                  viewMode === 'map'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Ver no mapa"
+              >
+                <Map className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Sort options */}
@@ -151,47 +181,69 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Zones grid */}
+      {/* Main content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-foreground">
-            {filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''} disponíve{filteredZones.length !== 1 ? 'is' : 'l'}
-          </h2>
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-              Limpar pesquisa
-            </button>
-          )}
-        </div>
-
-        {filteredZones.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredZones.map((zone, index) => (
-              <div 
-                key={zone.id} 
-                className="animate-slide-up"
-                style={{ animationDelay: `${index * 0.05}s` }}
-              >
-                <ZoneCard
-                  zone={zone}
-                  isSubscribed={isUserSubscribed(mockCurrentUser.id, zone.id)}
-                  onClick={() => handleZoneClick(zone.id)}
-                />
-              </div>
-            ))}
+        {viewMode === 'map' ? (
+          /* Map view */
+          <div className="animate-fade-in">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-foreground">
+                Mapa de Zonas
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+            <ZonesMap
+              zones={filteredZones}
+              onZoneSelect={handleZoneClick}
+              className="h-[500px] md:h-[600px]"
+            />
           </div>
         ) : (
-          <div className="text-center py-16">
-            <MapPin className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
-            <p className="text-muted-foreground">Nenhuma zona encontrada</p>
-            <Button variant="ghost" onClick={() => {setSearchQuery(''); setSelectedCity('Todas');}} className="mt-4">
-              Ver todas as zonas
-            </Button>
-          </div>
+          /* Grid view */
+          <>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-foreground">
+                {filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''} disponíve{filteredZones.length !== 1 ? 'is' : 'l'}
+              </h2>
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar pesquisa
+                </button>
+              )}
+            </div>
+
+            {filteredZones.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {filteredZones.map((zone, index) => (
+                  <div 
+                    key={zone.id} 
+                    className="animate-slide-up"
+                    style={{ animationDelay: `${index * 0.05}s` }}
+                  >
+                    <ZoneCard
+                      zone={zone}
+                      isSubscribed={isUserSubscribed(mockCurrentUser.id, zone.id)}
+                      onClick={() => handleZoneClick(zone.id)}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <MapPin className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
+                <p className="text-muted-foreground">Nenhuma zona encontrada</p>
+                <Button variant="ghost" onClick={() => {setSearchQuery(''); setSelectedCity('Todas');}} className="mt-4">
+                  Ver todas as zonas
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </main>
 
