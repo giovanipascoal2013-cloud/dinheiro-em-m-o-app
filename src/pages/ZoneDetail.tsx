@@ -63,7 +63,7 @@ const ZoneDetail = () => {
   if (!zone) {
     return (
       <div className="min-h-screen bg-background">
-        <Header isLoggedIn={true} />
+        <Header />
         <div className="container mx-auto px-4 py-16 text-center">
           <p className="text-muted-foreground">Zona não encontrada</p>
           <Button variant="ghost" onClick={() => navigate('/')} className="mt-4">
@@ -83,7 +83,7 @@ const ZoneDetail = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isLoggedIn={true} />
+      <Header />
 
       {/* Back button & header */}
       <div className="container mx-auto px-4 pt-4">

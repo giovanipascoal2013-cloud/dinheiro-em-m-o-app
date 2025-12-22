@@ -1,22 +1,45 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Home, MapPin, User, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Home, MapPin, User, Menu, X, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import logoIcon from '@/assets/logo-icon.png';
+import { toast } from '@/hooks/use-toast';
 
-interface HeaderProps {
-  isLoggedIn?: boolean;
-  onLoginClick?: () => void;
-}
-
-export function Header({ isLoggedIn = false, onLoginClick }: HeaderProps) {
+export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast({
+      title: 'Sessão terminada',
+      description: 'Até breve!',
+    });
+    navigate('/');
+  };
 
   const navItems = [
     { label: 'Início', href: '/', icon: Home },
     { label: 'Minhas Zonas', href: '/my-zones', icon: MapPin },
   ];
+
+  const isLoggedIn = !!user;
 
   return (
     <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border/50">
@@ -56,13 +79,21 @@ export function Header({ isLoggedIn = false, onLoginClick }: HeaderProps) {
           {/* Auth button */}
           <div className="flex items-center gap-2">
             {isLoggedIn ? (
-              <Link
-                to="/profile"
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <User className="h-4 w-4" />
-                <span className="hidden sm:block">Minha Conta</span>
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/agent"
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <User className="h-4 w-4" />
+                  <span className="hidden sm:block">Minha Conta</span>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
             ) : (
               <Link
                 to="/auth"
@@ -109,6 +140,18 @@ export function Header({ isLoggedIn = false, onLoginClick }: HeaderProps) {
                 </Link>
               );
             })}
+            {isLoggedIn && (
+              <button
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full"
+              >
+                <LogOut className="h-5 w-5" />
+                Terminar sessão
+              </button>
+            )}
           </nav>
         )}
       </div>

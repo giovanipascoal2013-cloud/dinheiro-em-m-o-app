@@ -65,7 +65,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header isLoggedIn={true} />
+      <Header />
 
       {/* Hero section */}
       <section className="relative overflow-hidden">
