@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { X, Banknote, CreditCard, Smartphone, Loader2, CheckCircle } from 'lucide-react';
+import { Banknote, CreditCard, Smartphone, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Zone } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PaymentModalProps {
   zone: Zone;
@@ -13,17 +17,81 @@ interface PaymentModalProps {
 }
 
 type PaymentMethod = 'multicaixa_express' | 'referencia' | 'cartao';
-type PaymentStep = 'select' | 'processing' | 'success';
+type PaymentStep = 'select' | 'phone' | 'processing' | 'success' | 'error';
+
+interface PaymentResult {
+  transaction_id: string;
+  subscription_id: string;
+  payment_ref: string;
+  expiry_date: string;
+  amount_kz: number;
+}
 
 export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalProps) {
   const [step, setStep] = useState<PaymentStep>('select');
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('multicaixa_express');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(null);
+  const { toast } = useToast();
+
+  const handleSelectMethod = () => {
+    if (selectedMethod === 'multicaixa_express') {
+      setStep('phone');
+    }
+  };
 
   const handlePay = async () => {
+    if (!phoneNumber || phoneNumber.length < 9) {
+      setError('Por favor, insira um número de telefone válido');
+      return;
+    }
+
     setStep('processing');
-    // Simulate payment processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setStep('success');
+    setError(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        setError('Por favor, faça login para continuar');
+        setStep('error');
+        return;
+      }
+
+      const { data, error: fnError } = await supabase.functions.invoke('process-payment', {
+        body: {
+          zone_id: zone.id,
+          zone_name: zone.nome,
+          amount_kz: zone.price_kz,
+          phone_number: phoneNumber,
+          method: selectedMethod,
+        },
+      });
+
+      if (fnError) {
+        console.error('Payment error:', fnError);
+        setError(fnError.message || 'Erro ao processar pagamento');
+        setStep('error');
+        return;
+      }
+
+      if (data?.success) {
+        setPaymentResult(data.data);
+        setStep('success');
+        toast({
+          title: 'Pagamento confirmado!',
+          description: `Referência: ${data.data.payment_ref}`,
+        });
+      } else {
+        setError(data?.error || 'Pagamento falhou');
+        setStep('error');
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('Erro inesperado. Por favor, tente novamente.');
+      setStep('error');
+    }
   };
 
   const handleClose = () => {
@@ -31,7 +99,15 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
       onSuccess();
     }
     setStep('select');
+    setPhoneNumber('');
+    setError(null);
+    setPaymentResult(null);
     onClose();
+  };
+
+  const handleRetry = () => {
+    setStep('phone');
+    setError(null);
   };
 
   const paymentMethods = [
@@ -129,9 +205,9 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
               variant="hero" 
               size="lg" 
               className="w-full"
-              onClick={handlePay}
+              onClick={handleSelectMethod}
             >
-              Pagar {zone.price_kz} KZ
+              Continuar
             </Button>
 
             <p className="text-xs text-muted-foreground text-center">
@@ -140,10 +216,60 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
           </div>
         )}
 
+        {step === 'phone' && (
+          <div className="space-y-4">
+            <div className="bg-secondary/50 rounded-xl p-4">
+              <h4 className="font-semibold text-foreground">{zone.nome}</h4>
+              <p className="text-sm text-muted-foreground mt-1">
+                Total: <span className="font-bold text-foreground">{zone.price_kz} KZ</span>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Número de telefone</Label>
+              <div className="flex">
+                <div className="flex items-center px-3 border border-r-0 rounded-l-md bg-muted text-muted-foreground text-sm">
+                  +244
+                </div>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="9XX XXX XXX"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                  className="rounded-l-none"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Receberá um pedido de pagamento no Multicaixa Express
+              </p>
+            </div>
+
+            <Button 
+              variant="hero" 
+              size="lg" 
+              className="w-full"
+              onClick={handlePay}
+              disabled={phoneNumber.length < 9}
+            >
+              Pagar {zone.price_kz} KZ
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              className="w-full"
+              onClick={() => setStep('select')}
+            >
+              Voltar
+            </Button>
+          </div>
+        )}
+
         {step === 'processing' && (
           <div className="py-12 flex flex-col items-center gap-4">
             <Loader2 className="h-12 w-12 text-primary animate-spin" />
             <p className="text-muted-foreground">Processando pagamento...</p>
+            <p className="text-xs text-muted-foreground">Confirme no seu telemóvel</p>
           </div>
         )}
 
@@ -157,10 +283,35 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
               <p className="text-muted-foreground mt-1">
                 Agora tem acesso à zona {zone.nome} por 90 dias
               </p>
+              {paymentResult && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Ref: {paymentResult.payment_ref}
+                </p>
+              )}
             </div>
             <Button variant="default" onClick={handleClose} className="mt-4">
               Ver ATMs
             </Button>
+          </div>
+        )}
+
+        {step === 'error' && (
+          <div className="py-8 flex flex-col items-center gap-4 text-center">
+            <div className="bg-destructive/10 p-4 rounded-full">
+              <AlertCircle className="h-12 w-12 text-destructive" />
+            </div>
+            <div>
+              <p className="font-semibold text-foreground text-lg">Pagamento falhou</p>
+              <p className="text-muted-foreground mt-1">{error}</p>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button variant="outline" onClick={handleClose}>
+                Cancelar
+              </Button>
+              <Button variant="default" onClick={handleRetry}>
+                Tentar novamente
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

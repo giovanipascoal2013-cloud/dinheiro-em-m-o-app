@@ -14,7 +14,92 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      subscriptions: {
+        Row: {
+          amount_kz: number
+          created_at: string
+          expiry_date: string
+          id: string
+          payment_ref: string | null
+          start_date: string
+          status: string
+          transaction_id: string | null
+          user_id: string | null
+          zone_id: string
+        }
+        Insert: {
+          amount_kz: number
+          created_at?: string
+          expiry_date: string
+          id?: string
+          payment_ref?: string | null
+          start_date?: string
+          status?: string
+          transaction_id?: string | null
+          user_id?: string | null
+          zone_id: string
+        }
+        Update: {
+          amount_kz?: number
+          created_at?: string
+          expiry_date?: string
+          id?: string
+          payment_ref?: string | null
+          start_date?: string
+          status?: string
+          transaction_id?: string | null
+          user_id?: string | null
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount_kz: number
+          created_at: string
+          id: string
+          method: string
+          payment_ref: string | null
+          phone_number: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          zone_id: string
+        }
+        Insert: {
+          amount_kz: number
+          created_at?: string
+          id?: string
+          method?: string
+          payment_ref?: string | null
+          phone_number?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          zone_id: string
+        }
+        Update: {
+          amount_kz?: number
+          created_at?: string
+          id?: string
+          method?: string
+          payment_ref?: string | null
+          phone_number?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          zone_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
