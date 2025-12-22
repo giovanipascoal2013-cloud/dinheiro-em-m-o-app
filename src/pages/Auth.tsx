@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Phone, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import logoIcon from '@/assets/logo-icon.png';
 
 type AuthMode = 'login' | 'register';
@@ -17,8 +18,24 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        navigate('/');
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        navigate('/');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const validatePhone = (phone: string): boolean => {
-    // Angola phone format: 9XX XXX XXX (9 digits starting with 9)
     const cleaned = phone.replace(/\D/g, '');
     return /^9\d{8}$/.test(cleaned);
   };
@@ -62,23 +79,63 @@ const Auth = () => {
 
     setIsLoading(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const cleanedPhone = telefone.replace(/\D/g, '');
+    // Use phone number as fake email for auth (Supabase requires email)
+    const fakeEmail = `${cleanedPhone}@dinheiroemao.ao`;
 
-    const cleanedPhone = '+244' + telefone.replace(/\D/g, '');
+    try {
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: fakeEmail,
+          password: password,
+        });
 
-    if (mode === 'login') {
-      toast({
-        title: 'Bem-vindo de volta!',
-        description: `Sessão iniciada com ${cleanedPhone}`,
-      });
-      navigate('/');
-    } else {
-      toast({
-        title: 'Conta criada com sucesso!',
-        description: 'Agora pode aceder a todas as funcionalidades.',
-      });
-      navigate('/');
+        if (error) {
+          if (error.message.includes('Invalid login credentials')) {
+            setErrors({ general: 'Telefone ou senha incorretos' });
+          } else {
+            setErrors({ general: error.message });
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        toast({
+          title: 'Bem-vindo de volta!',
+          description: `Sessão iniciada com +244 ${telefone}`,
+        });
+        navigate('/');
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email: fakeEmail,
+          password: password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              telefone: `+244${cleanedPhone}`,
+            },
+          },
+        });
+
+        if (error) {
+          if (error.message.includes('User already registered')) {
+            setErrors({ general: 'Este número já está registado. Tente fazer login.' });
+          } else {
+            setErrors({ general: error.message });
+          }
+          setIsLoading(false);
+          return;
+        }
+
+        toast({
+          title: 'Conta criada com sucesso!',
+          description: 'Agora pode aceder a todas as funcionalidades.',
+        });
+        navigate('/');
+      }
+    } catch (err) {
+      console.error('Auth error:', err);
+      setErrors({ general: 'Erro inesperado. Tente novamente.' });
     }
 
     setIsLoading(false);
@@ -108,6 +165,13 @@ const Auth = () => {
                 : 'Registe-se para subscrever zonas de ATMs'}
             </p>
           </div>
+
+          {/* General error */}
+          {errors.general && (
+            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-xl">
+              <p className="text-destructive text-sm text-center">{errors.general}</p>
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -147,7 +211,7 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
-                    setErrors(prev => ({ ...prev, password: '' }));
+                    setErrors(prev => ({ ...prev, password: '', general: '' }));
                   }}
                   placeholder="••••••••"
                   className="w-full h-12 pl-12 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
