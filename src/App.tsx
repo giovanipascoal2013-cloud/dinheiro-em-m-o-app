@@ -3,11 +3,17 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/hooks/useAuth";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import ZoneDetail from "./pages/ZoneDetail";
 import Auth from "./pages/Auth";
-import AgentDashboard from "./pages/AgentDashboard";
 import NotFound from "./pages/NotFound";
+import Dashboard from "./pages/Dashboard";
+import ZonesPage from "./pages/dashboard/Zones";
+import ATMsPage from "./pages/dashboard/ATMs";
+import AgentsPage from "./pages/dashboard/Agents";
+import RolesPage from "./pages/dashboard/Roles";
 
 const queryClient = new QueryClient();
 
@@ -17,13 +23,42 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/zone/:id" element={<ZoneDetail />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/agent" element={<AgentDashboard />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/zone/:id" element={<ZoneDetail />} />
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Dashboard routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'agent']}>
+                <Dashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/zones" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'agent']}>
+                <ZonesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/atms" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'agent']}>
+                <ATMsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/agents" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+                <AgentsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/roles" element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <RolesPage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
