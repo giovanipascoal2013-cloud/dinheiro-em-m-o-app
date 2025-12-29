@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import ZoneDetail from "./pages/ZoneDetail";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import MyZones from "./pages/MyZones";
 import Dashboard from "./pages/Dashboard";
 import ZonesPage from "./pages/dashboard/Zones";
 import ATMsPage from "./pages/dashboard/ATMs";
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/zone/:id" element={<ZoneDetail />} />
+            <Route path="/my-zones" element={<MyZones />} />
             <Route path="/auth" element={<Auth />} />
             
             {/* Dashboard routes */}
