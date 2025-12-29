@@ -102,7 +102,7 @@ export function Header() {
             {isLoggedIn ? (
               <div className="flex items-center gap-2">
                 <Link
-                  to="/agent"
+                  to="/my-zones"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <User className="h-4 w-4" />

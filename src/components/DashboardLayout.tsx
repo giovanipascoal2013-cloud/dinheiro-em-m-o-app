@@ -5,13 +5,9 @@ import {
   MapPin, 
   Banknote, 
   Users, 
-  Settings, 
   LogOut,
   Menu,
-  X,
-  ChevronDown,
-  Shield,
-  User
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -36,9 +32,7 @@ const navItems: NavItem[] = [
   { label: 'Zonas', href: '/dashboard/zones', icon: MapPin },
   { label: 'ATMs', href: '/dashboard/atms', icon: Banknote },
   { label: 'Agentes', href: '/dashboard/agents', icon: Users, roles: ['admin', 'supervisor'] },
-  { label: 'Utilizadores', href: '/dashboard/users', icon: User, roles: ['admin'] },
   { label: 'Roles', href: '/dashboard/roles', icon: Shield, roles: ['admin'] },
-  { label: 'Configurações', href: '/dashboard/settings', icon: Settings },
 ];
 
 export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
