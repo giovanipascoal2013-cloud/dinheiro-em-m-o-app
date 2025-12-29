@@ -15,6 +15,7 @@ import ZonesPage from "./pages/dashboard/Zones";
 import ATMsPage from "./pages/dashboard/ATMs";
 import AgentsPage from "./pages/dashboard/Agents";
 import RolesPage from "./pages/dashboard/Roles";
+import UsersPage from "./pages/dashboard/Users";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,11 @@ const App = () => (
             <Route path="/dashboard/roles" element={
               <ProtectedRoute requiredRoles={['admin']}>
                 <RolesPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/users" element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <UsersPage />
               </ProtectedRoute>
             } />
             
