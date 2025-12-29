@@ -1,29 +1,49 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, MapPin, User, Menu, X, LogOut } from 'lucide-react';
+import { Home, MapPin, User, Menu, X, LogOut, LayoutDashboard } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import logoIcon from '@/assets/logo-icon.png';
 import { toast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [hasRole, setHasRole] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        setTimeout(() => checkUserRole(session.user.id), 0);
+      } else {
+        setHasRole(false);
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        checkUserRole(session.user.id);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const checkUserRole = async (userId: string) => {
+    const { data } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .limit(1);
+    
+    setHasRole((data && data.length > 0) || false);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -37,6 +57,7 @@ export function Header() {
   const navItems = [
     { label: 'Início', href: '/', icon: Home },
     { label: 'Minhas Zonas', href: '/my-zones', icon: MapPin },
+    ...(hasRole ? [{ label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] : []),
   ];
 
   const isLoggedIn = !!user;
