@@ -64,6 +64,11 @@ const App = () => (
                 <UsersPage />
               </ProtectedRoute>
             } />
+            <Route path="/agent" element={
+              <ProtectedRoute requiredRoles={['agent']}>
+                <AgentDashboard />
+              </ProtectedRoute>
+            } />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
