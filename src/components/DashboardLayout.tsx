@@ -29,7 +29,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Meu Painel', href: '/agent', icon: LayoutDashboard, roles: ['agent'] },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'supervisor'] },
   { label: 'Zonas', href: '/dashboard/zones', icon: MapPin },
   { label: 'ATMs', href: '/dashboard/atms', icon: Banknote },
   { label: 'Agentes', href: '/dashboard/agents', icon: Users, roles: ['admin', 'supervisor'] },
