@@ -1,235 +1,271 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { 
   MapPin, 
-  TrendingUp, 
   Wallet, 
-  Clock, 
-  ChevronRight, 
+  Banknote, 
   RefreshCw,
-  LogOut,
-  User,
-  Banknote,
-  ThumbsUp,
-  ThumbsDown,
-  Edit
+  Users,
+  Clock,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
-import { Header } from '@/components/Header';
+import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { mockZones, mockATMs, mockAgents } from '@/data/mockData';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 
-// Simulating agent data
-const currentAgent = mockAgents[0];
-const agentZones = mockZones.filter(z => currentAgent.zonas.includes(z.id));
-const agentATMs = mockATMs.filter(atm => agentZones.some(z => z.id === atm.zona_id));
+interface Zone {
+  id: string;
+  name: string;
+  price_kz: number;
+  status: string;
+}
+
+interface ATM {
+  id: string;
+  bank_name: string;
+  address: string;
+  has_cash: boolean;
+  last_updated: string;
+  zone_id: string;
+}
+
+interface SubscriptionAgg {
+  zone_id: string;
+  total: number;
+  expired_amount: number;
+  active_amount: number;
+}
+
+const AGENT_SHARE = 0.7;
 
 const AgentDashboard = () => {
-  const navigate = useNavigate();
-  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [atms, setAtms] = useState<ATM[]>([]);
+  const [subscriptionAggs, setSubscriptionAggs] = useState<SubscriptionAgg[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingAtm, setUpdatingAtm] = useState<string | null>(null);
 
-  const totalEarnings = agentZones.reduce((sum, z) => sum + z.price_kz * 3, 0); // Mock: 3 subscribers per zone
-  const pendingPayout = Math.round(totalEarnings * 0.7); // 70% agent share
+  useEffect(() => {
+    if (user) fetchData();
+  }, [user]);
 
-  const handleUpdateATM = (atmId: string) => {
-    toast({
-      title: 'ATM atualizado',
-      description: 'O estado do ATM foi atualizado com sucesso.',
-    });
+  const fetchData = async () => {
+    if (!user) return;
+    setLoading(true);
+
+    try {
+      // 1. Get agent's zone IDs
+      const { data: agentZones } = await supabase
+        .from('agent_zones')
+        .select('zone_id')
+        .eq('agent_id', user.id);
+
+      const zoneIds = agentZones?.map(az => az.zone_id) ?? [];
+
+      if (zoneIds.length === 0) {
+        setZones([]);
+        setAtms([]);
+        setSubscriptionAggs([]);
+        setLoading(false);
+        return;
+      }
+
+      // 2. Fetch zones, ATMs, subscriptions in parallel
+      const [zonesRes, atmsRes, subsRes] = await Promise.all([
+        supabase.from('zones').select('id, name, price_kz, status').in('id', zoneIds),
+        supabase.from('atms').select('id, bank_name, address, has_cash, last_updated, zone_id').in('zone_id', zoneIds),
+        supabase.from('subscriptions').select('zone_id, amount_kz, status, expiry_date').in('zone_id', zoneIds),
+      ]);
+
+      setZones(zonesRes.data ?? []);
+      setAtms(atmsRes.data ?? []);
+
+      // 3. Aggregate subscriptions per zone
+      const subs = subsRes.data ?? [];
+      const now = new Date();
+      const aggMap = new Map<string, SubscriptionAgg>();
+
+      for (const sub of subs) {
+        const existing = aggMap.get(sub.zone_id) || { zone_id: sub.zone_id, total: 0, expired_amount: 0, active_amount: 0 };
+        existing.total += 1;
+        const amount = Number(sub.amount_kz);
+        const isExpired = sub.status === 'expired' || new Date(sub.expiry_date) < now;
+        if (isExpired) {
+          existing.expired_amount += amount;
+        } else {
+          existing.active_amount += amount;
+        }
+        aggMap.set(sub.zone_id, existing);
+      }
+
+      setSubscriptionAggs(Array.from(aggMap.values()));
+    } catch (error) {
+      console.error('Error fetching agent data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleToggleCash = async (atm: ATM) => {
+    setUpdatingAtm(atm.id);
+    const newStatus = !atm.has_cash;
+
+    const { error } = await supabase
+      .from('atms')
+      .update({ has_cash: newStatus, last_updated: new Date().toISOString() })
+      .eq('id', atm.id);
+
+    if (error) {
+      toast({ title: 'Erro', description: 'Não foi possível atualizar o ATM.', variant: 'destructive' });
+    } else {
+      setAtms(prev => prev.map(a => a.id === atm.id ? { ...a, has_cash: newStatus, last_updated: new Date().toISOString() } : a));
+      toast({ title: 'ATM atualizado', description: `${atm.bank_name} — ${newStatus ? 'Com dinheiro' : 'Sem dinheiro'}` });
+    }
+    setUpdatingAtm(null);
+  };
+
+  const totalSubscriptions = subscriptionAggs.reduce((sum, a) => sum + a.total, 0);
+  const availableBalance = subscriptionAggs.reduce((sum, a) => sum + a.expired_amount, 0) * AGENT_SHARE;
+  const pendingBalance = subscriptionAggs.reduce((sum, a) => sum + a.active_amount, 0) * AGENT_SHARE;
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Meu Painel" subtitle="Painel do Agente">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
+    <DashboardLayout title="Meu Painel" subtitle="Painel do Agente">
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <StatCard icon={MapPin} label="Zonas" value={zones.length} color="primary" />
+        <StatCard icon={Banknote} label="ATMs" value={atms.length} color="accent" />
+        <StatCard icon={Users} label="Adesões" value={totalSubscriptions} color="success" />
+        <StatCard 
+          icon={Wallet} 
+          label="Disponível" 
+          value={`${Math.round(availableBalance).toLocaleString()} KZ`} 
+          color="warning" 
+        />
+      </div>
 
-      <main className="container mx-auto px-4 py-6">
-        {/* Welcome section */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">
-            Olá, {currentAgent.nome.split(' ')[0]}!
-          </h1>
-          <p className="text-muted-foreground">Painel do Agente</p>
+      {/* Balance detail */}
+      <div className="bg-card rounded-xl p-5 shadow-card border border-border/50 mb-8">
+        <h2 className="font-semibold text-foreground mb-4">Saldo</h2>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Saldo disponível (subscrições terminadas × 70%)</span>
+            <span className="font-bold text-accent text-lg">{Math.round(availableBalance).toLocaleString()} KZ</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-muted-foreground">Saldo pendente (subscrições activas × 70%)</span>
+            <span className="font-semibold text-foreground">{Math.round(pendingBalance).toLocaleString()} KZ</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            O saldo pendente só fica disponível após a subscrição expirar.
+          </p>
         </div>
+      </div>
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <div className="bg-card rounded-xl p-4 shadow-card border border-border/50">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-primary/10 p-2 rounded-lg">
-                <MapPin className="h-4 w-4 text-primary" />
-              </div>
-              <span className="text-sm text-muted-foreground">Zonas</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{agentZones.length}</p>
+      {/* Zones with ATMs */}
+      <section>
+        <h2 className="font-semibold text-foreground mb-4">ATMs por Zona</h2>
+        {zones.length === 0 ? (
+          <div className="bg-card rounded-xl p-8 text-center border border-border/50">
+            <MapPin className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground">Nenhuma zona atribuída.</p>
           </div>
+        ) : (
+          <div className="space-y-4">
+            {zones.map(zone => {
+              const zoneAtms = atms.filter(a => a.zone_id === zone.id);
+              const zoneAgg = subscriptionAggs.find(a => a.zone_id === zone.id);
 
-          <div className="bg-card rounded-xl p-4 shadow-card border border-border/50">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-accent/10 p-2 rounded-lg">
-                <Banknote className="h-4 w-4 text-accent" />
-              </div>
-              <span className="text-sm text-muted-foreground">ATMs</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{agentATMs.length}</p>
-          </div>
-
-          <div className="bg-card rounded-xl p-4 shadow-card border border-border/50">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-success/10 p-2 rounded-lg">
-                <ThumbsUp className="h-4 w-4 text-success" />
-              </div>
-              <span className="text-sm text-muted-foreground">Likes</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{currentAgent.total_likes}</p>
-          </div>
-
-          <div className="bg-card rounded-xl p-4 shadow-card border border-border/50">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="bg-warning/10 p-2 rounded-lg">
-                <Wallet className="h-4 w-4 text-warning" />
-              </div>
-              <span className="text-sm text-muted-foreground">Pendente</span>
-            </div>
-            <p className="text-2xl font-bold text-foreground">{pendingPayout.toLocaleString()} KZ</p>
-          </div>
-        </div>
-
-        {/* Reputation overview */}
-        <div className="bg-card rounded-xl p-5 shadow-card border border-border/50 mb-8">
-          <h2 className="font-semibold text-foreground mb-4">Sua Reputação</h2>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className={cn(
-                "text-4xl font-bold",
-                currentAgent.avg_reputation >= 4 ? "text-accent" : 
-                currentAgent.avg_reputation >= 2.5 ? "text-foreground" : "text-warning"
-              )}>
-                {currentAgent.avg_reputation.toFixed(1)}
-              </div>
-              <span className="text-muted-foreground">/5</span>
-            </div>
-            <div className="flex-1">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className={cn(
-                    "h-full rounded-full transition-all",
-                    currentAgent.avg_reputation >= 4 ? "bg-accent" :
-                    currentAgent.avg_reputation >= 2.5 ? "bg-primary" : "bg-warning"
-                  )}
-                  style={{ width: `${(currentAgent.avg_reputation / 5) * 100}%` }}
-                />
-              </div>
-              <div className="flex justify-between mt-2 text-sm">
-                <span className="text-success flex items-center gap-1">
-                  <ThumbsUp className="h-3.5 w-3.5" />
-                  {currentAgent.total_likes}
-                </span>
-                <span className="text-destructive flex items-center gap-1">
-                  <ThumbsDown className="h-3.5 w-3.5" />
-                  {currentAgent.total_dislikes}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Zones section */}
-        <section className="mb-8">
-          <h2 className="font-semibold text-foreground mb-4">Suas Zonas</h2>
-          <div className="space-y-3">
-            {agentZones.map((zone) => {
-              const zoneATMs = agentATMs.filter(a => a.zona_id === zone.id);
-              const withMoney = zoneATMs.filter(a => a.status_atm === 'com_dinheiro').length;
-              
               return (
-                <div 
-                  key={zone.id}
-                  className="bg-card rounded-xl p-4 shadow-card border border-border/50"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{zone.nome}</h3>
-                      <p className="text-sm text-muted-foreground">{zone.atm_count} ATMs · {zone.cidade}</p>
-                    </div>
-                    <div className={cn(
-                      "px-3 py-1 rounded-full text-sm font-medium",
-                      zone.reputation_score >= 4 ? "bg-success/10 text-success" :
-                      zone.reputation_score >= 2.5 ? "bg-secondary text-secondary-foreground" :
-                      "bg-warning/10 text-warning"
-                    )}>
-                      ★ {zone.reputation_score.toFixed(1)}
-                    </div>
+                <div key={zone.id} className="bg-card rounded-xl p-5 shadow-card border border-border/50">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-semibold text-foreground">{zone.name}</h3>
+                    <span className="text-sm text-muted-foreground">
+                      {zoneAgg?.total ?? 0} adesões
+                    </span>
                   </div>
+                  <p className="text-sm text-muted-foreground mb-4">{zoneAtms.length} ATMs · {zone.price_kz.toLocaleString()} KZ/mês</p>
 
-                  {/* ATMs list for this zone */}
-                  <div className="space-y-2 mb-3">
-                    {zoneATMs.slice(0, 3).map((atm) => (
-                      <div 
-                        key={atm.id}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground truncate">{atm.nome}</p>
+                  <div className="space-y-2">
+                    {zoneAtms.map(atm => (
+                      <div key={atm.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex-1 min-w-0 mr-3">
+                          <div className="flex items-center gap-2">
+                            <span className={cn(
+                              "w-2 h-2 rounded-full shrink-0",
+                              atm.has_cash ? "bg-success" : "bg-destructive"
+                            )} />
+                            <p className="text-sm font-medium text-foreground truncate">{atm.bank_name}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{atm.address}</p>
                           <p className="text-xs text-muted-foreground">
-                            Atualizado {formatDistanceToNow(new Date(atm.last_update_at), { addSuffix: true, locale: pt })}
+                            <Clock className="h-3 w-3 inline mr-1" />
+                            {formatDistanceToNow(new Date(atm.last_updated), { addSuffix: true, locale: pt })}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 shrink-0">
                           <span className={cn(
-                            "w-2 h-2 rounded-full",
-                            atm.status_atm === 'com_dinheiro' ? "bg-success" :
-                            atm.status_atm === 'sem_dinheiro' ? "bg-destructive" : "bg-muted-foreground"
-                          )} />
-                          <Button 
-                            variant="ghost" 
-                            size="icon-sm"
-                            onClick={() => handleUpdateATM(atm.id)}
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
+                            "text-xs font-medium",
+                            atm.has_cash ? "text-success" : "text-destructive"
+                          )}>
+                            {atm.has_cash ? 'Com $' : 'Sem $'}
+                          </span>
+                          <Switch
+                            checked={atm.has_cash}
+                            disabled={updatingAtm === atm.id}
+                            onCheckedChange={() => handleToggleCash(atm)}
+                          />
                         </div>
                       </div>
                     ))}
+                    {zoneAtms.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum ATM nesta zona.</p>
+                    )}
                   </div>
-
-                  {zoneATMs.length > 3 && (
-                    <button className="text-sm text-primary hover:underline">
-                      Ver todos os {zoneATMs.length} ATMs
-                    </button>
-                  )}
                 </div>
               );
             })}
           </div>
-        </section>
-
-        {/* Earnings section */}
-        <section className="bg-card rounded-xl p-5 shadow-card border border-border/50">
-          <h2 className="font-semibold text-foreground mb-4">Ganhos</h2>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Total este trimestre</span>
-              <span className="font-semibold text-foreground">{totalEarnings.toLocaleString()} KZ</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Sua parte (70%)</span>
-              <span className="font-bold text-accent text-lg">{pendingPayout.toLocaleString()} KZ</span>
-            </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Próximo pagamento</span>
-              <span className="text-foreground">Janeiro 2025</span>
-            </div>
-            <Button variant="outline" className="w-full mt-2">
-              Ver histórico de pagamentos
-            </Button>
-          </div>
-        </section>
-      </main>
-    </div>
+        )}
+      </section>
+    </DashboardLayout>
   );
 };
+
+function StatCard({ icon: Icon, label, value, color }: { 
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+  color: string;
+}) {
+  return (
+    <div className="bg-card rounded-xl p-4 shadow-card border border-border/50">
+      <div className="flex items-center gap-3 mb-2">
+        <div className={`bg-${color}/10 p-2 rounded-lg`}>
+          <Icon className={`h-4 w-4 text-${color}`} />
+        </div>
+        <span className="text-sm text-muted-foreground">{label}</span>
+      </div>
+      <p className="text-2xl font-bold text-foreground">{value}</p>
+    </div>
+  );
+}
 
 export default AgentDashboard;
