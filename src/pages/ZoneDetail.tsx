@@ -204,7 +204,7 @@ const ZoneDetail = () => {
             </h2>
             <p className="text-muted-foreground mb-6">
               Subscreva para ver o estado dos {zone.atm_count} ATMs e avaliar o agente.
-              Acesso trimestral por apenas <strong>{zone.price_kz} KZ</strong>.
+              Acesso mensal por apenas <strong>{zone.price_kz} KZ</strong>.
             </p>
             <Button 
               variant="hero" 
