@@ -8,7 +8,9 @@ import {
   LogOut,
   Menu,
   Shield,
-  UserCog
+  UserCog,
+  ClipboardCheck,
+  Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -33,6 +35,8 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'supervisor'] },
   { label: 'Zonas', href: '/dashboard/zones', icon: MapPin },
   { label: 'ATMs', href: '/dashboard/atms', icon: Banknote },
+  { label: 'Subscrições', href: '/dashboard/subscriptions', icon: ClipboardCheck, roles: ['admin', 'supervisor'] },
+  { label: 'Levantamentos', href: '/dashboard/withdrawals', icon: Wallet, roles: ['admin'] },
   { label: 'Agentes', href: '/dashboard/agents', icon: Users, roles: ['admin', 'supervisor'] },
   { label: 'Utilizadores', href: '/dashboard/users', icon: UserCog, roles: ['admin'] },
   { label: 'Roles', href: '/dashboard/roles', icon: Shield, roles: ['admin'] },

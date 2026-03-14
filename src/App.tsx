@@ -16,6 +16,8 @@ import ATMsPage from "./pages/dashboard/ATMs";
 import AgentsPage from "./pages/dashboard/Agents";
 import RolesPage from "./pages/dashboard/Roles";
 import UsersPage from "./pages/dashboard/Users";
+import SubscriptionsPage from "./pages/dashboard/Subscriptions";
+import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AgentDashboard from "./pages/AgentDashboard";
 
 const queryClient = new QueryClient();
@@ -52,6 +54,16 @@ const App = () => (
             <Route path="/dashboard/agents" element={
               <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
                 <AgentsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/subscriptions" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+                <SubscriptionsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/withdrawals" element={
+              <ProtectedRoute requiredRoles={['admin']}>
+                <WithdrawalsPage />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/roles" element={
