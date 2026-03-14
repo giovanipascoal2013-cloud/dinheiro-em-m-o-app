@@ -143,7 +143,7 @@ const ZoneDetail = () => {
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
               <p className="text-2xl font-bold text-foreground">{zone.price_kz}</p>
-              <p className="text-xs text-muted-foreground">KZ / trimestre</p>
+              <p className="text-xs text-muted-foreground">KZ / mês</p>
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
               <p className="text-2xl font-bold text-success">{atmStats.available}</p>
