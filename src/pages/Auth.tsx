@@ -193,29 +193,68 @@ const Auth = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Phone input */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Número de telefone
-              </label>
-              <div className="relative">
-                <div className="absolute left-0 top-0 h-full flex items-center pl-4 pointer-events-none">
-                  <span className="text-muted-foreground font-medium">+244</span>
-                </div>
-                <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <input
-                  type="tel"
-                  value={telefone}
-                  onChange={handlePhoneChange}
-                  placeholder="9XX XXX XXX"
-                  maxLength={11}
-                  className="w-full h-12 pl-16 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                />
-              </div>
-              {errors.telefone && (
-                <p className="text-destructive text-sm mt-1.5">{errors.telefone}</p>
-              )}
+            {/* Login method toggle */}
+            <div className="flex rounded-xl bg-card border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setLoginMethod('phone'); setErrors({}); }}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${loginMethod === 'phone' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Telefone
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLoginMethod('email'); setErrors({}); }}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${loginMethod === 'email' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Email
+              </button>
             </div>
+
+            {/* Phone input */}
+            {loginMethod === 'phone' ? (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Número de telefone
+                </label>
+                <div className="relative">
+                  <div className="absolute left-0 top-0 h-full flex items-center pl-4 pointer-events-none">
+                    <span className="text-muted-foreground font-medium">+244</span>
+                  </div>
+                  <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="tel"
+                    value={telefone}
+                    onChange={handlePhoneChange}
+                    placeholder="9XX XXX XXX"
+                    maxLength={11}
+                    className="w-full h-12 pl-16 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
+                {errors.telefone && (
+                  <p className="text-destructive text-sm mt-1.5">{errors.telefone}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: '' })); }}
+                    placeholder="exemplo@email.com"
+                    className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-destructive text-sm mt-1.5">{errors.email}</p>
+                )}
+              </div>
+            )}
 
             {/* Password input */}
             <div>
