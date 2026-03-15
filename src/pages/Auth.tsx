@@ -1,24 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Phone, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
+import { Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logoIcon from '@/assets/logo-icon.png';
 
 type AuthMode = 'login' | 'register';
+type LoginMethod = 'phone' | 'email';
 
 const Auth = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<AuthMode>('login');
+  const [loginMethod, setLoginMethod] = useState<LoginMethod>('phone');
   const [telefone, setTelefone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Check if user is already logged in
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
@@ -40,6 +42,10 @@ const Auth = () => {
     return /^9\d{8}$/.test(cleaned);
   };
 
+  const validateEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const formatPhone = (value: string): string => {
     const cleaned = value.replace(/\D/g, '');
     if (cleaned.length <= 3) return cleaned;
@@ -56,8 +62,14 @@ const Auth = () => {
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!validatePhone(telefone)) {
-      newErrors.telefone = 'Número de telefone inválido (formato: 9XX XXX XXX)';
+    if (loginMethod === 'phone') {
+      if (!validatePhone(telefone)) {
+        newErrors.telefone = 'Número de telefone inválido (formato: 9XX XXX XXX)';
+      }
+    } else {
+      if (!validateEmail(email)) {
+        newErrors.email = 'Email inválido';
+      }
     }
 
     if (password.length < 6) {
@@ -79,20 +91,24 @@ const Auth = () => {
 
     setIsLoading(true);
 
-    const cleanedPhone = telefone.replace(/\D/g, '');
-    // Use phone number as fake email for auth (Supabase requires email)
-    const fakeEmail = `${cleanedPhone}@dinheiroemao.ao`;
+    let authEmail: string;
+    if (loginMethod === 'email') {
+      authEmail = email;
+    } else {
+      const cleanedPhone = telefone.replace(/\D/g, '');
+      authEmail = `${cleanedPhone}@dinheiroemao.ao`;
+    }
 
     try {
       if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({
-          email: fakeEmail,
+          email: authEmail,
           password: password,
         });
 
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
-            setErrors({ general: 'Telefone ou senha incorretos' });
+            setErrors({ general: 'Credenciais incorrectas' });
           } else {
             setErrors({ general: error.message });
           }
@@ -102,24 +118,26 @@ const Auth = () => {
 
         toast({
           title: 'Bem-vindo de volta!',
-          description: `Sessão iniciada com +244 ${telefone}`,
+          description: loginMethod === 'phone' ? `Sessão iniciada com +244 ${telefone}` : `Sessão iniciada com ${email}`,
         });
         navigate('/');
       } else {
+        const cleanedPhone = loginMethod === 'phone' ? telefone.replace(/\D/g, '') : '';
         const { error } = await supabase.auth.signUp({
-          email: fakeEmail,
+          email: authEmail,
           password: password,
           options: {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
-              telefone: `+244${cleanedPhone}`,
+              telefone: loginMethod === 'phone' ? `+244${cleanedPhone}` : '',
+              nome: '',
             },
           },
         });
 
         if (error) {
           if (error.message.includes('User already registered')) {
-            setErrors({ general: 'Este número já está registado. Tente fazer login.' });
+            setErrors({ general: 'Esta conta já está registada. Tente fazer login.' });
           } else {
             setErrors({ general: error.message });
           }
@@ -175,29 +193,68 @@ const Auth = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Phone input */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Número de telefone
-              </label>
-              <div className="relative">
-                <div className="absolute left-0 top-0 h-full flex items-center pl-4 pointer-events-none">
-                  <span className="text-muted-foreground font-medium">+244</span>
-                </div>
-                <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <input
-                  type="tel"
-                  value={telefone}
-                  onChange={handlePhoneChange}
-                  placeholder="9XX XXX XXX"
-                  maxLength={11}
-                  className="w-full h-12 pl-16 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                />
-              </div>
-              {errors.telefone && (
-                <p className="text-destructive text-sm mt-1.5">{errors.telefone}</p>
-              )}
+            {/* Login method toggle */}
+            <div className="flex rounded-xl bg-card border border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => { setLoginMethod('phone'); setErrors({}); }}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${loginMethod === 'phone' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Telefone
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLoginMethod('email'); setErrors({}); }}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${loginMethod === 'email' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+              >
+                Email
+              </button>
             </div>
+
+            {/* Phone input */}
+            {loginMethod === 'phone' ? (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Número de telefone
+                </label>
+                <div className="relative">
+                  <div className="absolute left-0 top-0 h-full flex items-center pl-4 pointer-events-none">
+                    <span className="text-muted-foreground font-medium">+244</span>
+                  </div>
+                  <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="tel"
+                    value={telefone}
+                    onChange={handlePhoneChange}
+                    placeholder="9XX XXX XXX"
+                    maxLength={11}
+                    className="w-full h-12 pl-16 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
+                {errors.telefone && (
+                  <p className="text-destructive text-sm mt-1.5">{errors.telefone}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: '' })); }}
+                    placeholder="exemplo@email.com"
+                    className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                  />
+                </div>
+                {errors.email && (
+                  <p className="text-destructive text-sm mt-1.5">{errors.email}</p>
+                )}
+              </div>
+            )}
 
             {/* Password input */}
             <div>
