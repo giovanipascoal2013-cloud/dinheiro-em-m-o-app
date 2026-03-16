@@ -426,15 +426,16 @@ function ATMForm({
         </div>
 
         <div>
-          <Label htmlFor="zone_id">Zona</Label>
+          <Label htmlFor="zone_id">Zona (opcional)</Label>
           <Select 
-            value={formData.zone_id} 
-            onValueChange={(value) => setFormData({ ...formData, zone_id: value })}
+            value={formData.zone_id || 'none'} 
+            onValueChange={(value) => setFormData({ ...formData, zone_id: value === 'none' ? '' : value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Seleccione uma zona" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="none">Sem zona (atribuir depois)</SelectItem>
               {zones.map(zone => (
                 <SelectItem key={zone.id} value={zone.id}>{zone.name}</SelectItem>
               ))}
