@@ -2,59 +2,70 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { supabase } from '@/integrations/supabase/client';
-import { MapPin, CreditCard, Clock } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { MapPin, CreditCard, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { mockZones } from '@/data/mockData';
 
-interface Subscription {
+interface SubscriptionData {
   id: string;
   status: string;
   start_date: string;
   expiry_date: string;
   amount_kz: number;
-  zone: {
-    id: string;
-    name: string;
-    description: string | null;
-  };
+  zone_id: string;
+  zone_name?: string;
 }
 
 export default function MyZones() {
-  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user.id);
-        fetchSubscriptions(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-  }, []);
+    if (user) {
+      fetchSubscriptions(user.id);
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   const fetchSubscriptions = async (userId: string) => {
     const { data, error } = await supabase
       .from('subscriptions')
-      .select(`
-        id,
-        status,
-        start_date,
-        expiry_date,
-        amount_kz,
-        zone:zones(id, name, description)
-      `)
+      .select('id, status, start_date, expiry_date, amount_kz, zone_id')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (!error && data) {
-      setSubscriptions(data as unknown as Subscription[]);
+      // Try to resolve zone names - first from DB, then from mock data
+      const zoneIds = [...new Set(data.map(s => s.zone_id))];
+      
+      // Try fetching from real zones table
+      let zoneMap: Record<string, string> = {};
+      const { data: zones } = await supabase
+        .from('zones')
+        .select('id, name')
+        .in('id', zoneIds.filter(id => id.match(/^[0-9a-f-]{36}$/i)));
+
+      if (zones) {
+        zones.forEach(z => { zoneMap[z.id] = z.name; });
+      }
+
+      // Fallback to mock data for non-UUID zone IDs
+      mockZones.forEach(z => {
+        if (!zoneMap[z.id]) zoneMap[z.id] = z.nome;
+      });
+
+      setSubscriptions(data.map(s => ({
+        ...s,
+        zone_name: zoneMap[s.zone_id] || `Zona ${s.zone_id}`,
+      })));
     }
     setLoading(false);
   };
@@ -70,6 +81,9 @@ export default function MyZones() {
     }
     if (status === 'pending') {
       return <Badge variant="secondary">Pendente</Badge>;
+    }
+    if (status === 'rejected') {
+      return <Badge variant="destructive">Rejeitado</Badge>;
     }
     return <Badge variant="outline">{status}</Badge>;
   };
@@ -132,16 +146,23 @@ export default function MyZones() {
               <Card key={sub.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader className="flex flex-row items-start justify-between space-y-0">
                   <div>
-                    <CardTitle className="text-lg">{sub.zone.name}</CardTitle>
-                    {sub.zone.description && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {sub.zone.description}
-                      </p>
-                    )}
+                    <CardTitle className="text-lg">{sub.zone_name}</CardTitle>
                   </div>
                   {getStatusBadge(sub.status, sub.expiry_date)}
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {sub.status === 'active' && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Acesso liberado</span>
+                    </div>
+                  )}
+                  {sub.status === 'pending' && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>Aguardando aprovação</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" />
                     <span>
@@ -152,9 +173,11 @@ export default function MyZones() {
                     <CreditCard className="h-4 w-4" />
                     <span>{sub.amount_kz.toLocaleString('pt-AO')} Kz</span>
                   </div>
-                  <Button asChild variant="outline" className="w-full mt-2">
-                    <Link to={`/zone/${sub.zone.id}`}>Ver Detalhes</Link>
-                  </Button>
+                  {sub.status === 'active' && (
+                    <Button asChild variant="outline" className="w-full mt-2">
+                      <Link to={`/zone/${sub.zone_id}`}>Ver Detalhes</Link>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
