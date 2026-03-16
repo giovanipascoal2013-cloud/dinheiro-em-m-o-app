@@ -99,7 +99,8 @@ export default function ATMsPage() {
     return matchesSearch && matchesZone && matchesStatus;
   });
 
-  const getZoneName = (zoneId: string) => {
+  const getZoneName = (zoneId: string | null) => {
+    if (!zoneId) return 'Sem zona';
     return zones.find(z => z.id === zoneId)?.name || 'Desconhecida';
   };
 
