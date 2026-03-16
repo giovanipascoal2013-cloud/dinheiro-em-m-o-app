@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 const ZoneDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [zone, setZone] = useState<Zone | null>(null);
@@ -31,10 +32,25 @@ const ZoneDetail = () => {
         setZone(zoneData);
         setAtms(getATMsByZoneId(id));
         setAgent(getAgentById(zoneData.agent_id) || null);
-        setIsSubscribed(isUserSubscribed(mockCurrentUser.id, id));
       }
     }
   }, [id]);
+
+  // Check real subscription status from database
+  useEffect(() => {
+    if (id && user) {
+      supabase
+        .from('subscriptions')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .eq('zone_id', id)
+        .eq('status', 'active')
+        .maybeSingle()
+        .then(({ data }) => {
+          setIsSubscribed(!!data);
+        });
+    }
+  }, [id, user]);
 
   const handleVote = async (value: 'like' | 'dislike') => {
     // Simulate API call
