@@ -1,14 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Copy, CheckCircle, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
-import { Zone } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
+interface PaymentZone {
+  id: string;
+  name: string;
+  price_kz: number;
+}
+
 interface PaymentModalProps {
-  zone: Zone;
+  zone: PaymentZone;
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
@@ -29,7 +34,6 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
 
   useEffect(() => {
     if (isOpen) {
-      // Generate a unique payment reference
       const ref = `DEM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       setPaymentRef(ref);
       setStep('info');
@@ -54,7 +58,6 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
     setStep('processing');
 
     try {
-      // Create transaction record
       const { error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
         zone_id: zone.id,
@@ -66,7 +69,6 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
 
       if (txError) throw txError;
 
-      // Create pending subscription
       const expiryDate = new Date();
       expiryDate.setMonth(expiryDate.getMonth() + 1);
 
@@ -90,9 +92,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
   };
 
   const handleClose = () => {
-    if (step === 'pending') {
-      onSuccess();
-    }
+    if (step === 'pending') onSuccess();
     setStep('info');
     setError(null);
     onClose();
@@ -103,15 +103,14 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {step === 'pending' ? 'Subscrição Pendente' : `Subscrever ${zone.nome}`}
+            {step === 'pending' ? 'Subscrição Pendente' : `Subscrever ${zone.name}`}
           </DialogTitle>
         </DialogHeader>
 
         {step === 'info' && (
           <div className="space-y-5">
-            {/* Zone summary */}
             <div className="bg-secondary/50 rounded-xl p-4">
-              <h4 className="font-semibold text-foreground">{zone.nome}</h4>
+              <h4 className="font-semibold text-foreground">{zone.name}</h4>
               <p className="text-sm text-muted-foreground mt-1">Acesso por 30 dias</p>
               <div className="flex items-baseline gap-1 mt-2">
                 <span className="text-3xl font-bold text-foreground">{zone.price_kz}</span>
@@ -119,11 +118,9 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
               </div>
             </div>
 
-            {/* Payment instructions */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">Dados para transferência:</p>
 
-              {/* IBAN */}
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
                   <p className="text-xs text-muted-foreground">IBAN</p>
@@ -134,7 +131,6 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
                 </Button>
               </div>
 
-              {/* Reference */}
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
                   <p className="text-xs text-muted-foreground">Referência (incluir na transferência)</p>
@@ -145,14 +141,13 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
                 </Button>
               </div>
 
-              {/* WhatsApp */}
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
                   <p className="text-xs text-muted-foreground">Enviar comprovativo via WhatsApp</p>
                   <p className="font-semibold text-foreground text-sm">{COMPANY_WHATSAPP}</p>
                 </div>
                 <a
-                  href={`https://wa.me/244${COMPANY_WHATSAPP.replace(/\s/g, '')}?text=${encodeURIComponent(`Olá! Fiz a transferência para a zona "${zone.nome}". Referência: ${paymentRef}`)}`}
+                  href={`https://wa.me/244${COMPANY_WHATSAPP.replace(/\s/g, '')}?text=${encodeURIComponent(`Olá! Fiz a transferência para a zona "${zone.name}". Referência: ${paymentRef}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -169,13 +164,8 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
               </p>
             </div>
 
-            <Button variant="hero" size="lg" className="w-full" onClick={handleConfirmPayment}>
-              Já paguei
-            </Button>
-
-            <p className="text-xs text-muted-foreground text-center">
-              A subscrição será ativada após verificação do pagamento.
-            </p>
+            <Button variant="hero" size="lg" className="w-full" onClick={handleConfirmPayment}>Já paguei</Button>
+            <p className="text-xs text-muted-foreground text-center">A subscrição será ativada após verificação do pagamento.</p>
           </div>
         )}
 
@@ -193,16 +183,10 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
             </div>
             <div>
               <p className="font-semibold text-foreground text-lg">Pagamento registado!</p>
-              <p className="text-muted-foreground mt-1">
-                A sua subscrição está pendente de aprovação. Será notificado assim que for aprovada.
-              </p>
-              <p className="text-xs text-muted-foreground mt-3 font-mono">
-                Ref: {paymentRef}
-              </p>
+              <p className="text-muted-foreground mt-1">A sua subscrição está pendente de aprovação.</p>
+              <p className="text-xs text-muted-foreground mt-3 font-mono">Ref: {paymentRef}</p>
             </div>
-            <Button variant="default" onClick={handleClose} className="mt-4">
-              Entendido
-            </Button>
+            <Button variant="default" onClick={handleClose} className="mt-4">Entendido</Button>
           </div>
         )}
 

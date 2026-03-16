@@ -1,63 +1,108 @@
-import { useState, useMemo } from 'react';
-import { Search, MapPin, SlidersHorizontal, Star, X, Map, LayoutGrid } from 'lucide-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Search, MapPin, SlidersHorizontal, X, Map, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
-import { ZoneCard } from '@/components/ZoneCard';
+import { ZoneCard, ZoneCardData } from '@/components/ZoneCard';
 import { ZonesMap } from '@/components/ZonesMap';
 import { Button } from '@/components/ui/button';
-import { mockZones, mockCurrentUser, isUserSubscribed } from '@/data/mockData';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import logoIcon from '@/assets/logo-icon.png';
 
-const cities = ['Todas', 'Luanda', 'Benguela', 'Huambo'];
 const sortOptions = [
-  { value: 'rating', label: 'Melhor avaliação' },
   { value: 'price_asc', label: 'Menor preço' },
   { value: 'price_desc', label: 'Maior preço' },
   { value: 'atms', label: 'Mais ATMs' },
+  { value: 'name', label: 'Nome A-Z' },
 ];
 
 const Index = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCity, setSelectedCity] = useState('Todas');
-  const [sortBy, setSortBy] = useState('rating');
+  const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [zones, setZones] = useState<ZoneCardData[]>([]);
+  const [subscribedZoneIds, setSubscribedZoneIds] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchZones();
+  }, []);
+
+  useEffect(() => {
+    if (user) fetchSubscriptions();
+  }, [user]);
+
+  const fetchZones = async () => {
+    const { data: zonesData } = await supabase
+      .from('zones')
+      .select('*')
+      .eq('status', 'active');
+
+    if (zonesData) {
+      // Get ATM counts per zone
+      const { data: atmsData } = await supabase
+        .from('atms')
+        .select('zone_id');
+
+      const atmCounts: Record<string, number> = {};
+      atmsData?.forEach(atm => {
+        if (atm.zone_id) {
+          atmCounts[atm.zone_id] = (atmCounts[atm.zone_id] || 0) + 1;
+        }
+      });
+
+      setZones(zonesData.map(z => ({
+        ...z,
+        atm_count: atmCounts[z.id] || 0,
+      })));
+    }
+    setLoading(false);
+  };
+
+  const fetchSubscriptions = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('zone_id')
+      .eq('user_id', user.id)
+      .eq('status', 'active');
+
+    if (data) {
+      setSubscribedZoneIds(new Set(data.map(s => s.zone_id)));
+    }
+  };
 
   const filteredZones = useMemo(() => {
-    let zones = [...mockZones];
+    let result = [...zones];
 
-    // Filter by search
     if (searchQuery) {
-      zones = zones.filter(z => 
-        z.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        z.cidade.toLowerCase().includes(searchQuery.toLowerCase())
+      const q = searchQuery.toLowerCase();
+      result = result.filter(z =>
+        z.name.toLowerCase().includes(q) ||
+        (z.description && z.description.toLowerCase().includes(q))
       );
     }
 
-    // Filter by city
-    if (selectedCity !== 'Todas') {
-      zones = zones.filter(z => z.cidade === selectedCity);
-    }
-
-    // Sort
     switch (sortBy) {
-      case 'rating':
-        zones.sort((a, b) => b.reputation_score - a.reputation_score);
-        break;
       case 'price_asc':
-        zones.sort((a, b) => a.price_kz - b.price_kz);
+        result.sort((a, b) => a.price_kz - b.price_kz);
         break;
       case 'price_desc':
-        zones.sort((a, b) => b.price_kz - a.price_kz);
+        result.sort((a, b) => b.price_kz - a.price_kz);
         break;
       case 'atms':
-        zones.sort((a, b) => b.atm_count - a.atm_count);
+        result.sort((a, b) => (b.atm_count ?? 0) - (a.atm_count ?? 0));
+        break;
+      case 'name':
+        result.sort((a, b) => a.name.localeCompare(b.name));
         break;
     }
 
-    return zones;
-  }, [searchQuery, selectedCity, sortBy]);
+    return result;
+  }, [zones, searchQuery, sortBy]);
 
   const handleZoneClick = (zoneId: string) => {
     navigate(`/zone/${zoneId}`);
@@ -82,7 +127,6 @@ const Index = () => {
               Zonas verificadas por agentes locais — subscreva para aceder informações em tempo real
             </p>
 
-            {/* Search bar */}
             <div className="relative max-w-md mx-auto animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <input
@@ -101,25 +145,6 @@ const Index = () => {
       <section className="sticky top-16 z-40 bg-background/80 backdrop-blur-lg border-b border-border/50">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
-            {/* City filter pills */}
-            {cities.map((city) => (
-              <button
-                key={city}
-                onClick={() => setSelectedCity(city)}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-                  selectedCity === city
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                }`}
-              >
-                {city !== 'Todas' && <MapPin className="h-3.5 w-3.5" />}
-                {city}
-              </button>
-            ))}
-
-            <div className="h-6 w-px bg-border mx-1" />
-
-            {/* Sort button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-medium bg-muted text-muted-foreground hover:bg-muted/80 transition-all whitespace-nowrap"
@@ -130,26 +155,17 @@ const Index = () => {
 
             <div className="h-6 w-px bg-border mx-1" />
 
-            {/* View toggle */}
             <div className="flex items-center bg-muted rounded-full p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-full transition-all ${
-                  viewMode === 'grid'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className={`p-2 rounded-full transition-all ${viewMode === 'grid' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                 title="Ver em grelha"
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setViewMode('map')}
-                className={`p-2 rounded-full transition-all ${
-                  viewMode === 'map'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
+                className={`p-2 rounded-full transition-all ${viewMode === 'map' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                 title="Ver no mapa"
               >
                 <Map className="h-4 w-4" />
@@ -157,16 +173,12 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Sort options */}
           {showFilters && (
             <div className="flex flex-wrap gap-2 pt-3 pb-1 animate-fade-in">
               {sortOptions.map((option) => (
                 <button
                   key={option.value}
-                  onClick={() => {
-                    setSortBy(option.value);
-                    setShowFilters(false);
-                  }}
+                  onClick={() => { setSortBy(option.value); setShowFilters(false); }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                     sortBy === option.value
                       ? 'bg-secondary text-secondary-foreground'
@@ -183,35 +195,28 @@ const Index = () => {
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-8">
-        {viewMode === 'map' ? (
-          /* Map view */
+        {loading ? (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-48 bg-card rounded-2xl animate-pulse" />
+            ))}
+          </div>
+        ) : viewMode === 'map' ? (
           <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-foreground">
-                Mapa de Zonas
-              </h2>
-              <span className="text-sm text-muted-foreground">
-                {filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''}
-              </span>
+              <h2 className="text-lg font-semibold text-foreground">Mapa de Zonas</h2>
+              <span className="text-sm text-muted-foreground">{filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''}</span>
             </div>
-            <ZonesMap
-              zones={filteredZones}
-              onZoneSelect={handleZoneClick}
-              className="h-[500px] md:h-[600px]"
-            />
+            <ZonesMap zones={filteredZones} onZoneSelect={handleZoneClick} className="h-[500px] md:h-[600px]" />
           </div>
         ) : (
-          /* Grid view */
           <>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-foreground">
                 {filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''} disponíve{filteredZones.length !== 1 ? 'is' : 'l'}
               </h2>
               {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-                >
+                <button onClick={() => setSearchQuery('')} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
                   <X className="h-4 w-4" />
                   Limpar pesquisa
                 </button>
@@ -221,14 +226,10 @@ const Index = () => {
             {filteredZones.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredZones.map((zone, index) => (
-                  <div 
-                    key={zone.id} 
-                    className="animate-slide-up"
-                    style={{ animationDelay: `${index * 0.05}s` }}
-                  >
+                  <div key={zone.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.05}s` }}>
                     <ZoneCard
                       zone={zone}
-                      isSubscribed={isUserSubscribed(mockCurrentUser.id, zone.id)}
+                      isSubscribed={subscribedZoneIds.has(zone.id)}
                       onClick={() => handleZoneClick(zone.id)}
                     />
                   </div>
@@ -238,7 +239,7 @@ const Index = () => {
               <div className="text-center py-16">
                 <MapPin className="h-12 w-12 text-muted-foreground/50 mx-auto mb-4" />
                 <p className="text-muted-foreground">Nenhuma zona encontrada</p>
-                <Button variant="ghost" onClick={() => {setSearchQuery(''); setSelectedCity('Todas');}} className="mt-4">
+                <Button variant="ghost" onClick={() => setSearchQuery('')} className="mt-4">
                   Ver todas as zonas
                 </Button>
               </div>
@@ -247,12 +248,9 @@ const Index = () => {
         )}
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border/50 py-8 mt-8">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            © 2024 Dinheiro em Mão. Feito em Angola 🇦🇴
-          </p>
+          <p className="text-sm text-muted-foreground">© 2024 Dinheiro em Mão. Feito em Angola 🇦🇴</p>
         </div>
       </footer>
     </div>
