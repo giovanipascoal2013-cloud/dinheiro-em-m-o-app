@@ -120,7 +120,21 @@ const Auth = () => {
           title: 'Bem-vindo de volta!',
           description: loginMethod === 'phone' ? `Sessão iniciada com +244 ${telefone}` : `Sessão iniciada com ${email}`,
         });
-        navigate('/');
+
+        // Redirect based on role
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', (await supabase.auth.getUser()).data.user?.id ?? '');
+        
+        const userRoles = rolesData?.map(r => r.role) ?? [];
+        if (userRoles.includes('admin') || userRoles.includes('supervisor')) {
+          navigate('/dashboard');
+        } else if (userRoles.includes('agent')) {
+          navigate('/agent');
+        } else {
+          navigate('/');
+        }
       } else {
         const cleanedPhone = loginMethod === 'phone' ? telefone.replace(/\D/g, '') : '';
         const { error } = await supabase.auth.signUp({
