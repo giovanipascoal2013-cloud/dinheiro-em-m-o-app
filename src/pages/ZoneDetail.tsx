@@ -6,14 +6,17 @@ import { ATMList } from '@/components/ATMList';
 import { RatingWidget, RatingCTA } from '@/components/RatingWidget';
 import { PaymentModal } from '@/components/PaymentModal';
 import { Button } from '@/components/ui/button';
-import { getZoneById, getATMsByZoneId, getAgentById, mockCurrentUser, isUserSubscribed } from '@/data/mockData';
+import { getZoneById, getATMsByZoneId, getAgentById } from '@/data/mockData';
 import { Zone, ATM, Agent } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const ZoneDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [zone, setZone] = useState<Zone | null>(null);
   const [atms, setAtms] = useState<ATM[]>([]);
@@ -29,10 +32,25 @@ const ZoneDetail = () => {
         setZone(zoneData);
         setAtms(getATMsByZoneId(id));
         setAgent(getAgentById(zoneData.agent_id) || null);
-        setIsSubscribed(isUserSubscribed(mockCurrentUser.id, id));
       }
     }
   }, [id]);
+
+  // Check real subscription status from database
+  useEffect(() => {
+    if (id && user) {
+      supabase
+        .from('subscriptions')
+        .select('id, status')
+        .eq('user_id', user.id)
+        .eq('zone_id', id)
+        .eq('status', 'active')
+        .maybeSingle()
+        .then(({ data }) => {
+          setIsSubscribed(!!data);
+        });
+    }
+  }, [id, user]);
 
   const handleVote = async (value: 'like' | 'dislike') => {
     // Simulate API call
