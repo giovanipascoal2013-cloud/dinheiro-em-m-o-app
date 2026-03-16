@@ -15,7 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 
 const ZoneDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [zone, setZone] = useState<Zone | null>(null);
   const [atms, setAtms] = useState<ATM[]>([]);
