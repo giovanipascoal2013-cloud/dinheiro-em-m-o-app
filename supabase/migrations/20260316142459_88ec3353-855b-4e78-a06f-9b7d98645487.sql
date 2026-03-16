@@ -1,0 +1,1 @@
+ALTER TABLE public.atms ALTER COLUMN zone_id DROP NOT NULL;

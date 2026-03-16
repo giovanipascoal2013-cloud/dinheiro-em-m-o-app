@@ -56,7 +56,7 @@ export type Database = {
           last_updated: string
           latitude: number
           longitude: number
-          zone_id: string
+          zone_id: string | null
         }
         Insert: {
           address: string
@@ -67,7 +67,7 @@ export type Database = {
           last_updated?: string
           latitude: number
           longitude: number
-          zone_id: string
+          zone_id?: string | null
         }
         Update: {
           address?: string
@@ -78,7 +78,7 @@ export type Database = {
           last_updated?: string
           latitude?: number
           longitude?: number
-          zone_id?: string
+          zone_id?: string | null
         }
         Relationships: [
           {
