@@ -21,16 +21,32 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const redirectByRole = async (userId: string) => {
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    
+    const userRoles = rolesData?.map(r => r.role) ?? [];
+    if (userRoles.includes('admin') || userRoles.includes('supervisor')) {
+      navigate('/dashboard');
+    } else if (userRoles.includes('agent')) {
+      navigate('/agent');
+    } else {
+      navigate('/');
+    }
+  };
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate('/');
+        redirectByRole(session.user.id);
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate('/');
+        redirectByRole(session.user.id);
       }
     });
 
