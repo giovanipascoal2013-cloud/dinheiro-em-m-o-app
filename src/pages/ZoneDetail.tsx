@@ -1,82 +1,101 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Star, User, Clock, AlertTriangle, Lock } from 'lucide-react';
+import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, WifiOff } from 'lucide-react';
 import { Header } from '@/components/Header';
-import { ATMList } from '@/components/ATMList';
-import { RatingWidget, RatingCTA } from '@/components/RatingWidget';
 import { PaymentModal } from '@/components/PaymentModal';
 import { Button } from '@/components/ui/button';
-import { getZoneById, getATMsByZoneId, getAgentById } from '@/data/mockData';
-import { Zone, ATM, Agent } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
+
+interface DBZone {
+  id: string;
+  name: string;
+  description: string | null;
+  latitude: number;
+  longitude: number;
+  price_kz: number;
+  status: string;
+}
+
+interface DBAtm {
+  id: string;
+  bank_name: string;
+  address: string;
+  has_cash: boolean;
+  last_updated: string;
+}
 
 const ZoneDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [zone, setZone] = useState<Zone | null>(null);
-  const [atms, setAtms] = useState<ATM[]>([]);
-  const [agent, setAgent] = useState<Agent | null>(null);
+  const [zone, setZone] = useState<DBZone | null>(null);
+  const [atms, setAtms] = useState<DBAtm[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      const zoneData = getZoneById(id);
-      if (zoneData) {
-        setZone(zoneData);
-        setAtms(getATMsByZoneId(id));
-        setAgent(getAgentById(zoneData.agent_id) || null);
-      }
-    }
+    if (id) fetchZone();
   }, [id]);
 
-  // Check real subscription status from database
   useEffect(() => {
-    if (id && user) {
-      supabase
-        .from('subscriptions')
-        .select('id, status')
-        .eq('user_id', user.id)
-        .eq('zone_id', id)
-        .eq('status', 'active')
-        .maybeSingle()
-        .then(({ data }) => {
-          setIsSubscribed(!!data);
-        });
-    }
+    if (id && user) checkSubscription();
   }, [id, user]);
 
-  const handleVote = async (value: 'like' | 'dislike') => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setUserVote(value);
-    toast({
-      title: value === 'like' ? 'Obrigado pelo voto positivo!' : 'Voto registado',
-      description: 'A sua avaliação ajuda a comunidade.',
-    });
+  const fetchZone = async () => {
+    const { data: zoneData } = await supabase
+      .from('zones')
+      .select('*')
+      .eq('id', id!)
+      .single();
+
+    if (zoneData) {
+      setZone(zoneData);
+
+      const { data: atmsData } = await supabase
+        .from('atms')
+        .select('id, bank_name, address, has_cash, last_updated')
+        .eq('zone_id', id!)
+        .order('last_updated', { ascending: false });
+
+      if (atmsData) setAtms(atmsData);
+    }
+    setLoading(false);
   };
 
-  const handleReportATM = (atm: ATM) => {
-    toast({
-      title: 'Reportar ATM',
-      description: `Funcionalidade de reportar "${atm.nome}" em desenvolvimento.`,
-    });
+  const checkSubscription = async () => {
+    const { data } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user!.id)
+      .eq('zone_id', id!)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    setIsSubscribed(!!data);
   };
 
   const handlePaymentSuccess = () => {
     setIsSubscribed(true);
     setShowPaymentModal(false);
-    toast({
-      title: 'Subscrição ativada!',
-      description: `Agora tem acesso à zona ${zone?.nome}.`,
-    });
+    toast({ title: 'Subscrição registada!', description: 'Aguarde aprovação do pagamento.' });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-16">
+          <div className="h-48 bg-card rounded-2xl animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   if (!zone) {
     return (
@@ -84,31 +103,23 @@ const ZoneDetail = () => {
         <Header />
         <div className="container mx-auto px-4 py-16 text-center">
           <p className="text-muted-foreground">Zona não encontrada</p>
-          <Button variant="ghost" onClick={() => navigate('/')} className="mt-4">
-            Voltar ao início
-          </Button>
+          <Button variant="ghost" onClick={() => navigate('/')} className="mt-4">Voltar ao início</Button>
         </div>
       </div>
     );
   }
 
-  const hasLowScore = zone.reputation_score < 2.5;
   const atmStats = {
-    available: atms.filter(a => a.status_atm === 'com_dinheiro').length,
-    unavailable: atms.filter(a => a.status_atm === 'sem_dinheiro').length,
-    offline: atms.filter(a => a.status_atm === 'offline').length,
+    available: atms.filter(a => a.has_cash).length,
+    unavailable: atms.filter(a => !a.has_cash).length,
   };
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
 
-      {/* Back button & header */}
       <div className="container mx-auto px-4 pt-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4"
-        >
+        <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-4">
           <ArrowLeft className="h-4 w-4" />
           <span className="text-sm">Voltar</span>
         </button>
@@ -119,24 +130,16 @@ const ZoneDetail = () => {
         <div className="bg-card rounded-2xl p-6 shadow-card border border-border/50">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-2xl font-bold text-foreground">{zone.nome}</h1>
-                {hasLowScore && (
-                  <div className="bg-warning/10 text-warning p-1 rounded-full">
-                    <AlertTriangle className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                <MapPin className="h-4 w-4" />
-                <span>{zone.cidade}</span>
-              </div>
+              <h1 className="text-2xl font-bold text-foreground mb-1">{zone.name}</h1>
+              {zone.description && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{zone.description}</span>
+                </div>
+              )}
             </div>
-
             {isSubscribed ? (
-              <div className="bg-success/10 text-success text-sm font-medium px-3 py-1.5 rounded-full">
-                Subscrito
-              </div>
+              <div className="bg-success/10 text-success text-sm font-medium px-3 py-1.5 rounded-full">Subscrito</div>
             ) : (
               <div className="bg-muted text-muted-foreground p-2.5 rounded-lg">
                 <Lock className="h-5 w-5" />
@@ -144,20 +147,10 @@ const ZoneDetail = () => {
             )}
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4">
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
-              <p className="text-2xl font-bold text-foreground">{zone.atm_count}</p>
+              <p className="text-2xl font-bold text-foreground">{atms.length}</p>
               <p className="text-xs text-muted-foreground">ATMs</p>
-            </div>
-            <div className={`rounded-xl p-3 text-center ${hasLowScore ? 'bg-warning/10' : 'bg-accent/10'}`}>
-              <div className="flex items-center justify-center gap-1">
-                <Star className={`h-5 w-5 ${hasLowScore ? 'text-warning' : 'text-accent'}`} />
-                <span className={`text-2xl font-bold ${hasLowScore ? 'text-warning' : 'text-foreground'}`}>
-                  {zone.reputation_score.toFixed(1)}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground">Avaliação</p>
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
               <p className="text-2xl font-bold text-foreground">{zone.price_kz}</p>
@@ -168,78 +161,65 @@ const ZoneDetail = () => {
               <p className="text-xs text-muted-foreground">Com dinheiro</p>
             </div>
           </div>
-
-          {/* Agent info */}
-          {agent && (
-            <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-xl">
-              <div className="bg-primary/10 p-2.5 rounded-full">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-foreground">Agente: {agent.nome}</p>
-                <p className="text-xs text-muted-foreground">
-                  {agent.verified ? 'Verificado ✓' : 'Não verificado'} · {zone.likes + zone.dislikes} avaliações
-                </p>
-              </div>
-              {isSubscribed && (
-                <RatingWidget
-                  likes={zone.likes}
-                  dislikes={zone.dislikes}
-                  userVote={userVote}
-                  onVote={handleVote}
-                />
-              )}
-            </div>
-          )}
         </div>
       </section>
 
       {/* Content */}
       <main className="container mx-auto px-4 pb-8">
         {isSubscribed ? (
-          <div className="space-y-6">
-            {/* ATM list */}
-            <section>
-              <h2 className="text-lg font-semibold text-foreground mb-4">
-                ATMs na zona ({atms.length})
-              </h2>
-              <ATMList atms={atms} onReportATM={handleReportATM} />
-            </section>
-
-            {/* Rating CTA if not voted */}
-            {!userVote && agent && (
-              <RatingCTA agentName={agent.nome} onRate={() => {}} />
-            )}
-          </div>
+          <section>
+            <h2 className="text-lg font-semibold text-foreground mb-4">ATMs na zona ({atms.length})</h2>
+            <div className="space-y-3">
+              {atms.map((atm) => (
+                <div key={atm.id} className="bg-card rounded-xl p-4 border border-border/50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Banknote className="h-4 w-4 text-primary flex-shrink-0" />
+                        <h4 className="font-semibold text-foreground truncate">{atm.bank_name}</h4>
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate mb-1">{atm.address}</p>
+                      <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
+                        <Clock className="h-3 w-3" />
+                        <span>Atualizado {formatDistanceToNow(new Date(atm.last_updated), { addSuffix: true, locale: pt })}</span>
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium flex-shrink-0 ml-3",
+                      atm.has_cash ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
+                    )}>
+                      {atm.has_cash ? (
+                        <><CheckCircle2 className="h-3 w-3" /> Com dinheiro</>
+                      ) : (
+                        <><XCircle className="h-3 w-3" /> Sem dinheiro</>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {atms.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">Nenhum ATM registado nesta zona.</p>
+              )}
+            </div>
+          </section>
         ) : (
-          /* Paywall */
           <div className="bg-card rounded-2xl p-8 text-center shadow-card border border-border/50 max-w-md mx-auto">
             <div className="bg-primary/10 p-4 rounded-full w-fit mx-auto mb-6">
               <Lock className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-xl font-bold text-foreground mb-2">
-              Acesso à Zona Bloqueado
-            </h2>
+            <h2 className="text-xl font-bold text-foreground mb-2">Acesso à Zona Bloqueado</h2>
             <p className="text-muted-foreground mb-6">
-              Subscreva para ver o estado dos {zone.atm_count} ATMs e avaliar o agente.
+              Subscreva para ver o estado dos {atms.length} ATMs.
               Acesso mensal por apenas <strong>{zone.price_kz} KZ</strong>.
             </p>
-            <Button 
-              variant="hero" 
-              size="lg" 
-              className="w-full"
-              onClick={() => setShowPaymentModal(true)}
-            >
+            <Button variant="hero" size="lg" className="w-full" onClick={() => setShowPaymentModal(true)}>
               Subscrever por {zone.price_kz} KZ
             </Button>
-            <p className="text-xs text-muted-foreground mt-4">
-              Pagamento seguro via Multicaixa Express
-            </p>
+            <p className="text-xs text-muted-foreground mt-4">Pagamento seguro via Multicaixa Express</p>
           </div>
         )}
       </main>
 
-      {/* Payment modal */}
       <PaymentModal
         zone={zone}
         isOpen={showPaymentModal}
