@@ -350,15 +350,19 @@ function ATMForm({
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
+    const payload: any = {
       bank_name: formData.bank_name,
       address: formData.address,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
-      zone_id: formData.zone_id,
       has_cash: formData.has_cash,
       last_updated: new Date().toISOString(),
     };
+    if (formData.zone_id) {
+      payload.zone_id = formData.zone_id;
+    } else {
+      payload.zone_id = null;
+    }
 
     try {
       if (atm) {
