@@ -6,11 +6,13 @@ import { ATMList } from '@/components/ATMList';
 import { RatingWidget, RatingCTA } from '@/components/RatingWidget';
 import { PaymentModal } from '@/components/PaymentModal';
 import { Button } from '@/components/ui/button';
-import { getZoneById, getATMsByZoneId, getAgentById, mockCurrentUser, isUserSubscribed } from '@/data/mockData';
+import { getZoneById, getATMsByZoneId, getAgentById } from '@/data/mockData';
 import { Zone, ATM, Agent } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const ZoneDetail = () => {
   const { id } = useParams<{ id: string }>();
