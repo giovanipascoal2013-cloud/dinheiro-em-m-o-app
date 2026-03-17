@@ -55,6 +55,10 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
 
   const filteredNavItems = navItems.filter(item => {
     if (!item.roles) return true;
+    // If user is admin/supervisor, exclude agent-only items
+    if ((isAdmin || isSupervisor) && item.roles.length === 1 && item.roles[0] === 'agent') return false;
+    // If user is only agent, exclude admin/supervisor-only items
+    if (!isAdmin && !isSupervisor && isAgent && !item.roles.includes('agent')) return false;
     if (isAdmin && item.roles.includes('admin')) return true;
     if (isSupervisor && item.roles.includes('supervisor')) return true;
     if (isAgent && item.roles.includes('agent')) return true;

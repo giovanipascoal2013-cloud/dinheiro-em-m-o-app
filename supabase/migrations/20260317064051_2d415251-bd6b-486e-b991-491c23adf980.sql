@@ -1,0 +1,1 @@
+ALTER TABLE public.zones ALTER COLUMN price_kz SET DEFAULT 0;
