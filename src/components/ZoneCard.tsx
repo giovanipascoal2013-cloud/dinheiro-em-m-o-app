@@ -67,8 +67,19 @@ export function ZoneCard({ zone, isSubscribed = false, onClick }: ZoneCardProps)
       {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t border-border/50">
         <div>
-          <span className="text-2xl font-bold text-foreground">{zone.price_kz}</span>
-          <span className="text-sm text-muted-foreground ml-1">KZ / mês</span>
+          {zone.price_kz === 0 ? (
+            <>
+              <span className="text-2xl font-bold text-foreground">
+                {(zone.atm_count ?? 0) > 0 ? ((zone.atm_count ?? 0) * 500).toLocaleString() : 'Grátis'}
+              </span>
+              {(zone.atm_count ?? 0) > 0 && <span className="text-sm text-muted-foreground ml-1">KZ / mês</span>}
+            </>
+          ) : (
+            <>
+              <span className="text-2xl font-bold text-foreground">{zone.price_kz.toLocaleString()}</span>
+              <span className="text-sm text-muted-foreground ml-1">KZ / mês</span>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-1 text-primary font-medium text-sm group-hover:gap-2 transition-all">
           {isSubscribed ? 'Acessar' : 'Subscrever'}

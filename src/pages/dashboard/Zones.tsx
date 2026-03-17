@@ -6,7 +6,10 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  Eye
+  Banknote,
+  Users,
+  ClipboardCheck,
+  X
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -32,6 +35,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 
 interface Zone {
   id: string;
@@ -45,6 +49,13 @@ interface Zone {
   updated_at: string;
 }
 
+interface ZoneDetail {
+  atms: { id: string; bank_name: string; address: string; has_cash: boolean }[];
+  subscriptionCount: number;
+  totalBilling: number;
+  agents: { agent_id: string; nome: string | null; referral_code: string }[];
+}
+
 export default function ZonesPage() {
   const { isAdmin, isSupervisor } = useAuth();
   const [zones, setZones] = useState<Zone[]>([]);
@@ -52,6 +63,9 @@ export default function ZonesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
+  const [detailZone, setDetailZone] = useState<Zone | null>(null);
+  const [zoneDetail, setZoneDetail] = useState<ZoneDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
     fetchZones();
@@ -88,6 +102,42 @@ export default function ZonesPage() {
       toast({ title: 'Zona eliminada com sucesso' });
       fetchZones();
     }
+  };
+
+  const openDetail = async (zone: Zone) => {
+    setDetailZone(zone);
+    setDetailLoading(true);
+    setZoneDetail(null);
+
+    const [atmsRes, subsRes, agentZonesRes] = await Promise.all([
+      supabase.from('atms').select('id, bank_name, address, has_cash').eq('zone_id', zone.id),
+      supabase.from('subscriptions').select('amount_kz').eq('zone_id', zone.id).eq('status', 'active'),
+      supabase.from('agent_zones').select('agent_id, referral_code').eq('zone_id', zone.id),
+    ]);
+
+    // Fetch agent profiles
+    const agentIds = agentZonesRes.data?.map(a => a.agent_id) || [];
+    let agents: ZoneDetail['agents'] = [];
+    if (agentIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, nome')
+        .in('user_id', agentIds);
+
+      agents = (agentZonesRes.data || []).map(az => ({
+        agent_id: az.agent_id,
+        nome: profiles?.find(p => p.user_id === az.agent_id)?.nome || null,
+        referral_code: az.referral_code,
+      }));
+    }
+
+    setZoneDetail({
+      atms: atmsRes.data || [],
+      subscriptionCount: subsRes.data?.length || 0,
+      totalBilling: subsRes.data?.reduce((sum, s) => sum + Number(s.amount_kz), 0) || 0,
+      agents,
+    });
+    setDetailLoading(false);
   };
 
   return (
@@ -152,6 +202,7 @@ export default function ZonesPage() {
               zone={zone} 
               onEdit={() => setEditingZone(zone)}
               onDelete={() => handleDelete(zone.id)}
+              onClick={() => openDetail(zone)}
               canManage={isAdmin || isSupervisor}
             />
           ))}
@@ -172,6 +223,108 @@ export default function ZonesPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Detail dialog */}
+      <Dialog open={!!detailZone} onOpenChange={(open) => !open && setDetailZone(null)}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          {detailZone && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  {detailZone.name}
+                </DialogTitle>
+                <DialogDescription>{detailZone.description || 'Sem descrição'}</DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-5 py-4">
+                {/* Status & Price */}
+                <div className="flex items-center justify-between">
+                  <Badge variant={detailZone.status === 'active' ? 'default' : 'secondary'}>
+                    {detailZone.status === 'active' ? 'Activa' : 'Suspensa'}
+                  </Badge>
+                  <span className="text-lg font-bold text-foreground">
+                    {detailZone.price_kz === 0 ? 'A calcular' : `${detailZone.price_kz.toLocaleString()} KZ`}
+                  </span>
+                </div>
+
+                {/* Coordinates */}
+                <div className="text-xs text-muted-foreground">
+                  Coordenadas: {detailZone.latitude.toFixed(4)}, {detailZone.longitude.toFixed(4)}
+                </div>
+
+                {detailLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map(i => <div key={i} className="h-12 bg-muted rounded-lg animate-pulse" />)}
+                  </div>
+                ) : zoneDetail && (
+                  <>
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-muted rounded-lg p-3 text-center">
+                        <Banknote className="h-5 w-5 mx-auto text-primary mb-1" />
+                        <p className="text-lg font-bold text-foreground">{zoneDetail.atms.length}</p>
+                        <p className="text-xs text-muted-foreground">ATMs</p>
+                      </div>
+                      <div className="bg-muted rounded-lg p-3 text-center">
+                        <ClipboardCheck className="h-5 w-5 mx-auto text-primary mb-1" />
+                        <p className="text-lg font-bold text-foreground">{zoneDetail.subscriptionCount}</p>
+                        <p className="text-xs text-muted-foreground">Subscrições</p>
+                      </div>
+                      <div className="bg-muted rounded-lg p-3 text-center">
+                        <Users className="h-5 w-5 mx-auto text-primary mb-1" />
+                        <p className="text-lg font-bold text-foreground">{zoneDetail.agents.length}</p>
+                        <p className="text-xs text-muted-foreground">Agentes</p>
+                      </div>
+                    </div>
+
+                    {/* Billing */}
+                    <div className="bg-primary/5 rounded-lg p-3">
+                      <p className="text-sm text-muted-foreground">Facturação total activa</p>
+                      <p className="text-xl font-bold text-foreground">{zoneDetail.totalBilling.toLocaleString()} KZ</p>
+                    </div>
+
+                    {/* ATMs list */}
+                    {zoneDetail.atms.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2">ATMs</h4>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {zoneDetail.atms.map(atm => (
+                            <div key={atm.id} className="flex items-center justify-between bg-card border border-border rounded-lg p-2.5 text-sm">
+                              <div>
+                                <p className="font-medium text-foreground">{atm.bank_name}</p>
+                                <p className="text-xs text-muted-foreground">{atm.address}</p>
+                              </div>
+                              <Badge variant={atm.has_cash ? 'default' : 'destructive'} className="text-xs">
+                                {atm.has_cash ? 'Com dinheiro' : 'Sem dinheiro'}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Agents */}
+                    {zoneDetail.agents.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-semibold text-foreground mb-2">Agentes atribuídos</h4>
+                        <div className="space-y-2">
+                          {zoneDetail.agents.map(agent => (
+                            <div key={agent.agent_id} className="flex items-center justify-between bg-card border border-border rounded-lg p-2.5 text-sm">
+                              <span className="font-medium text-foreground">{agent.nome || 'Sem nome'}</span>
+                              <span className="text-xs text-muted-foreground font-mono">{agent.referral_code}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
@@ -180,15 +333,20 @@ function ZoneCard({
   zone, 
   onEdit, 
   onDelete,
+  onClick,
   canManage 
 }: { 
   zone: Zone; 
   onEdit: () => void;
   onDelete: () => void;
+  onClick: () => void;
   canManage: boolean;
 }) {
   return (
-    <div className="bg-card rounded-xl p-5 shadow-card border border-border/50 hover:shadow-lg transition-shadow">
+    <div 
+      onClick={onClick}
+      className="bg-card rounded-xl p-5 shadow-card border border-border/50 hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5"
+    >
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 p-2 rounded-lg">
@@ -209,16 +367,16 @@ function ZoneCard({
         {canManage && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit(); }}>
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onDelete} className="text-destructive">
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Eliminar
               </DropdownMenuItem>
@@ -235,7 +393,7 @@ function ZoneCard({
 
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <span className="text-lg font-bold text-foreground">
-          {zone.price_kz.toLocaleString()} KZ
+          {zone.price_kz === 0 ? 'A calcular' : `${zone.price_kz.toLocaleString()} KZ`}
         </span>
         <span className="text-xs text-muted-foreground">
           Lat: {zone.latitude.toFixed(4)}, Long: {zone.longitude.toFixed(4)}
@@ -258,7 +416,7 @@ function ZoneForm({
     description: zone?.description || '',
     latitude: zone?.latitude?.toString() || '-8.8383',
     longitude: zone?.longitude?.toString() || '13.2344',
-    price_kz: zone?.price_kz?.toString() || '1500',
+    price_kz: zone ? (zone.price_kz === 0 ? '' : zone.price_kz.toString()) : '',
     status: zone?.status || 'active',
   });
 
@@ -271,7 +429,7 @@ function ZoneForm({
       description: formData.description || null,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
-      price_kz: parseInt(formData.price_kz),
+      price_kz: formData.price_kz ? parseInt(formData.price_kz) : 0,
       status: formData.status,
     };
 
@@ -368,8 +526,9 @@ function ZoneForm({
               type="number"
               value={formData.price_kz}
               onChange={(e) => setFormData({ ...formData, price_kz: e.target.value })}
-              required
+              placeholder="Auto-calcular"
             />
+            <p className="text-xs text-muted-foreground mt-1">Deixe vazio para auto-calcular</p>
           </div>
           <div>
             <Label htmlFor="status">Estado</Label>
