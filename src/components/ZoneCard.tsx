@@ -80,6 +80,7 @@ export function ZoneCard({ zone, isSubscribed = false, onClick }: ZoneCardProps)
               <span className="text-sm text-muted-foreground ml-1">KZ / mês</span>
             </>
           )}
+        </div>
         <div className="flex items-center gap-1 text-primary font-medium text-sm group-hover:gap-2 transition-all">
           {isSubscribed ? 'Acessar' : 'Subscrever'}
           <ChevronRight className="h-4 w-4" />
