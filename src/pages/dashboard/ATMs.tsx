@@ -8,7 +8,10 @@ import {
   Trash2,
   RefreshCw,
   CheckCircle2,
-  XCircle
+  XCircle,
+  AlertTriangle,
+  WrenchIcon,
+  FileText
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -50,9 +53,14 @@ interface ATM {
   latitude: number;
   longitude: number;
   has_cash: boolean;
+  has_paper: boolean | null;
   zone_id: string;
   last_updated: string;
   created_at: string;
+  cidade: string | null;
+  fila: string | null;
+  provincia: string | null;
+  status: string | null;
 }
 
 interface Zone {
@@ -68,6 +76,8 @@ export default function ATMsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterZone, setFilterZone] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterCidade, setFilterCidade] = useState<string>('all');
+  const [filterOperacional, setFilterOperacional] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingAtm, setEditingAtm] = useState<ATM | null>(null);
 
@@ -81,10 +91,12 @@ export default function ATMsPage() {
       supabase.from('zones').select('id, name'),
     ]);
 
-    if (atmsResult.data) setAtms(atmsResult.data);
+    if (atmsResult.data) setAtms(atmsResult.data as ATM[]);
     if (zonesResult.data) setZones(zonesResult.data);
     setIsLoading(false);
   };
+
+  const cidades = [...new Set(atms.map(a => a.cidade).filter(Boolean))] as string[];
 
   const filteredAtms = atms.filter(atm => {
     const matchesSearch = 
@@ -95,13 +107,26 @@ export default function ATMsPage() {
       filterStatus === 'all' ||
       (filterStatus === 'with_cash' && atm.has_cash) ||
       (filterStatus === 'no_cash' && !atm.has_cash);
+    const matchesCidade = filterCidade === 'all' || atm.cidade === filterCidade;
+    const matchesOperacional = filterOperacional === 'all' || atm.status === filterOperacional;
     
-    return matchesSearch && matchesZone && matchesStatus;
+    return matchesSearch && matchesZone && matchesStatus && matchesCidade && matchesOperacional;
   });
 
   const getZoneName = (zoneId: string | null) => {
     if (!zoneId) return 'Sem zona';
     return zones.find(z => z.id === zoneId)?.name || 'Desconhecida';
+  };
+
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case 'Sob Manutenção':
+        return { icon: WrenchIcon, label: status, className: 'bg-warning/10 text-warning' };
+      case 'Fora de Serviço':
+        return { icon: AlertTriangle, label: status, className: 'bg-destructive/10 text-destructive' };
+      default:
+        return { icon: CheckCircle2, label: 'Operacional', className: 'bg-success/10 text-success' };
+    }
   };
 
   const handleToggleStatus = async (atm: ATM) => {
@@ -144,23 +169,34 @@ export default function ATMsPage() {
             className="pl-10"
           />
         </div>
-        <Select value={filterZone} onValueChange={setFilterZone}>
+        <Select value={filterCidade} onValueChange={setFilterCidade}>
           <SelectTrigger className="w-full lg:w-48">
-            <SelectValue placeholder="Filtrar por zona" />
+            <SelectValue placeholder="Filtrar por cidade" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as zonas</SelectItem>
-            {zones.map(zone => (
-              <SelectItem key={zone.id} value={zone.id}>{zone.name}</SelectItem>
+            <SelectItem value="all">Todas as cidades</SelectItem>
+            {cidades.map(c => (
+              <SelectItem key={c} value={c}>{c}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterOperacional} onValueChange={setFilterOperacional}>
+          <SelectTrigger className="w-full lg:w-48">
+            <SelectValue placeholder="Estado operacional" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="Operacional">Operacional</SelectItem>
+            <SelectItem value="Sob Manutenção">Sob Manutenção</SelectItem>
+            <SelectItem value="Fora de Serviço">Fora de Serviço</SelectItem>
           </SelectContent>
         </Select>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-full lg:w-48">
-            <SelectValue placeholder="Filtrar por estado" />
+            <SelectValue placeholder="Dinheiro" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os estados</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             <SelectItem value="with_cash">Com dinheiro</SelectItem>
             <SelectItem value="no_cash">Sem dinheiro</SelectItem>
           </SelectContent>
@@ -173,7 +209,7 @@ export default function ATMsPage() {
                 Novo ATM
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
               <ATMForm 
                 zones={zones}
                 onSuccess={() => {
@@ -184,6 +220,26 @@ export default function ATMsPage() {
             </DialogContent>
           </Dialog>
         )}
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-card rounded-xl p-4 border border-border/50">
+          <p className="text-sm text-muted-foreground">Total ATMs</p>
+          <p className="text-2xl font-bold text-foreground">{atms.length}</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 border border-border/50">
+          <p className="text-sm text-muted-foreground">Com dinheiro</p>
+          <p className="text-2xl font-bold text-success">{atms.filter(a => a.has_cash).length}</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 border border-border/50">
+          <p className="text-sm text-muted-foreground">Operacionais</p>
+          <p className="text-2xl font-bold text-foreground">{atms.filter(a => a.status === 'Operacional' || !a.status).length}</p>
+        </div>
+        <div className="bg-card rounded-xl p-4 border border-border/50">
+          <p className="text-sm text-muted-foreground">Fora de Serviço</p>
+          <p className="text-2xl font-bold text-destructive">{atms.filter(a => a.status === 'Fora de Serviço').length}</p>
+        </div>
       </div>
 
       {/* ATMs list */}
@@ -209,100 +265,121 @@ export default function ATMsPage() {
                 <tr>
                   <th className="text-left p-4 font-medium text-muted-foreground">Banco</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Endereço</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Cidade</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Zona</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Dinheiro</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Papel</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Fila</th>
                   <th className="text-left p-4 font-medium text-muted-foreground">Estado</th>
-                  <th className="text-left p-4 font-medium text-muted-foreground">Última Actualização</th>
+                  <th className="text-left p-4 font-medium text-muted-foreground">Actualização</th>
                   <th className="text-right p-4 font-medium text-muted-foreground">Acções</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredAtms.map((atm, index) => (
-                  <tr 
-                    key={atm.id}
-                    className={cn(
-                      "border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors",
-                      index % 2 === 0 ? "bg-transparent" : "bg-muted/10"
-                    )}
-                  >
-                    <td className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "p-2 rounded-lg",
-                          atm.has_cash ? "bg-success/10" : "bg-destructive/10"
-                        )}>
-                          <Banknote className={cn(
-                            "h-4 w-4",
-                            atm.has_cash ? "text-success" : "text-destructive"
-                          )} />
+                {filteredAtms.map((atm, index) => {
+                  const statusBadge = getStatusBadge(atm.status);
+                  const StatusIcon = statusBadge.icon;
+                  return (
+                    <tr 
+                      key={atm.id}
+                      className={cn(
+                        "border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors",
+                        index % 2 === 0 ? "bg-transparent" : "bg-muted/10"
+                      )}
+                    >
+                      <td className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "p-2 rounded-lg",
+                            atm.has_cash ? "bg-success/10" : "bg-destructive/10"
+                          )}>
+                            <Banknote className={cn(
+                              "h-4 w-4",
+                              atm.has_cash ? "text-success" : "text-destructive"
+                            )} />
+                          </div>
+                          <span className="font-medium text-foreground">{atm.bank_name}</span>
                         </div>
-                        <span className="font-medium text-foreground">{atm.bank_name}</span>
-                      </div>
-                    </td>
-                    <td className="p-4 text-muted-foreground">{atm.address}</td>
-                    <td className="p-4">
-                      <span className="px-2 py-1 bg-secondary rounded-full text-xs font-medium text-secondary-foreground">
-                        {getZoneName(atm.zone_id)}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className={cn(
-                        "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
-                        atm.has_cash 
-                          ? "bg-success/10 text-success" 
-                          : "bg-destructive/10 text-destructive"
-                      )}>
-                        {atm.has_cash ? (
-                          <>
-                            <CheckCircle2 className="h-3 w-3" />
-                            Com dinheiro
-                          </>
-                        ) : (
-                          <>
-                            <XCircle className="h-3 w-3" />
-                            Sem dinheiro
-                          </>
-                        )}
-                      </span>
-                    </td>
-                    <td className="p-4 text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(atm.last_updated), { addSuffix: true, locale: pt })}
-                    </td>
-                    <td className="p-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleToggleStatus(atm)}
-                          title={atm.has_cash ? 'Marcar sem dinheiro' : 'Marcar com dinheiro'}
-                        >
-                          <RefreshCw className="h-4 w-4" />
-                        </Button>
-                        {(isAdmin || isSupervisor) && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => setEditingAtm(atm)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(atm.id)} 
-                                className="text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-4 text-muted-foreground max-w-[200px] truncate">{atm.address}</td>
+                      <td className="p-4 text-muted-foreground text-sm">{atm.cidade || '—'}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-secondary rounded-full text-xs font-medium text-secondary-foreground">
+                          {getZoneName(atm.zone_id)}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className={cn(
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                          atm.has_cash 
+                            ? "bg-success/10 text-success" 
+                            : "bg-destructive/10 text-destructive"
+                        )}>
+                          {atm.has_cash ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          {atm.has_cash ? 'Sim' : 'Não'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className={cn(
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                          atm.has_paper
+                            ? "bg-success/10 text-success" 
+                            : "bg-destructive/10 text-destructive"
+                        )}>
+                          <FileText className="h-3 w-3" />
+                          {atm.has_paper ? 'Sim' : 'Não'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">{atm.fila || '—'}</td>
+                      <td className="p-4">
+                        <span className={cn(
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium",
+                          statusBadge.className
+                        )}>
+                          <StatusIcon className="h-3 w-3" />
+                          {statusBadge.label}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(atm.last_updated), { addSuffix: true, locale: pt })}
+                      </td>
+                      <td className="p-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleToggleStatus(atm)}
+                            title={atm.has_cash ? 'Marcar sem dinheiro' : 'Marcar com dinheiro'}
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                          </Button>
+                          {(isAdmin || isSupervisor) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => setEditingAtm(atm)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDelete(atm.id)} 
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -311,7 +388,7 @@ export default function ATMsPage() {
 
       {/* Edit dialog */}
       <Dialog open={!!editingAtm} onOpenChange={(open) => !open && setEditingAtm(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           {editingAtm && (
             <ATMForm 
               atm={editingAtm}
@@ -345,25 +422,31 @@ function ATMForm({
     longitude: atm?.longitude?.toString() || '13.2344',
     zone_id: atm?.zone_id || '',
     has_cash: atm?.has_cash ?? true,
+    has_paper: atm?.has_paper ?? true,
+    cidade: atm?.cidade || '',
+    provincia: atm?.provincia || '',
+    fila: atm?.fila || '',
+    status: atm?.status || 'Operacional',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       bank_name: formData.bank_name,
       address: formData.address,
       latitude: parseFloat(formData.latitude),
       longitude: parseFloat(formData.longitude),
       has_cash: formData.has_cash,
+      has_paper: formData.has_paper,
+      cidade: formData.cidade || null,
+      provincia: formData.provincia || null,
+      fila: formData.fila || null,
+      status: formData.status,
       last_updated: new Date().toISOString(),
     };
-    if (formData.zone_id) {
-      payload.zone_id = formData.zone_id;
-    } else {
-      payload.zone_id = null;
-    }
+    payload.zone_id = formData.zone_id || null;
 
     try {
       if (atm) {
@@ -426,6 +509,27 @@ function ATMForm({
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="cidade">Cidade</Label>
+            <Input
+              id="cidade"
+              value={formData.cidade}
+              onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+              placeholder="Luanda, Benguela..."
+            />
+          </div>
+          <div>
+            <Label htmlFor="provincia">Província</Label>
+            <Input
+              id="provincia"
+              value={formData.provincia}
+              onChange={(e) => setFormData({ ...formData, provincia: e.target.value })}
+              placeholder="Luanda, Benguela..."
+            />
+          </div>
+        </div>
+
         <div>
           <Label htmlFor="zone_id">Zona (opcional)</Label>
           <Select 
@@ -469,15 +573,62 @@ function ATMForm({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="has_cash"
-            checked={formData.has_cash}
-            onChange={(e) => setFormData({ ...formData, has_cash: e.target.checked })}
-            className="h-4 w-4"
-          />
-          <Label htmlFor="has_cash" className="font-normal">Tem dinheiro</Label>
+        <div>
+          <Label htmlFor="fila">Fila</Label>
+          <Select 
+            value={formData.fila || 'none'}
+            onValueChange={(value) => setFormData({ ...formData, fila: value === 'none' ? '' : value })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Nível de fila" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sem informação</SelectItem>
+              <SelectItem value="Pouca Gente ( 0 - 6 )">Pouca Gente (0-6)</SelectItem>
+              <SelectItem value="Moderado (7 - 13)">Moderado (7-13)</SelectItem>
+              <SelectItem value="Muita Gente (+14)">Muita Gente (+14)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label htmlFor="status">Estado Operacional</Label>
+          <Select 
+            value={formData.status}
+            onValueChange={(value) => setFormData({ ...formData, status: value })}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Operacional">Operacional</SelectItem>
+              <SelectItem value="Sob Manutenção">Sob Manutenção</SelectItem>
+              <SelectItem value="Fora de Serviço">Fora de Serviço</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="has_cash"
+              checked={formData.has_cash}
+              onChange={(e) => setFormData({ ...formData, has_cash: e.target.checked })}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="has_cash" className="font-normal">Tem dinheiro</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="has_paper"
+              checked={formData.has_paper}
+              onChange={(e) => setFormData({ ...formData, has_paper: e.target.checked })}
+              className="h-4 w-4"
+            />
+            <Label htmlFor="has_paper" className="font-normal">Tem papel</Label>
+          </div>
         </div>
       </div>
 

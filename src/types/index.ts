@@ -29,6 +29,11 @@ export interface ATM {
   reported_by: string;
   notes?: string;
   distance?: number;
+  cidade?: string;
+  fila?: string;
+  has_paper?: boolean;
+  provincia?: string;
+  status?: string;
 }
 
 export interface Agent {
@@ -79,7 +84,7 @@ export interface Rating {
   user_id: string;
   agent_id: string;
   zona_id: string;
-  value: 0 | 1; // 0 = dislike, 1 = like
+  value: 0 | 1;
   created_at: string;
 }
 
