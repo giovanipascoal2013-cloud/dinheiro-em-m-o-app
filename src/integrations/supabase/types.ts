@@ -50,34 +50,49 @@ export type Database = {
         Row: {
           address: string
           bank_name: string
+          cidade: string | null
           created_at: string
+          fila: string | null
           has_cash: boolean
+          has_paper: boolean | null
           id: string
           last_updated: string
           latitude: number
           longitude: number
+          provincia: string | null
+          status: string | null
           zone_id: string | null
         }
         Insert: {
           address: string
           bank_name: string
+          cidade?: string | null
           created_at?: string
+          fila?: string | null
           has_cash?: boolean
+          has_paper?: boolean | null
           id?: string
           last_updated?: string
           latitude: number
           longitude: number
+          provincia?: string | null
+          status?: string | null
           zone_id?: string | null
         }
         Update: {
           address?: string
           bank_name?: string
+          cidade?: string | null
           created_at?: string
+          fila?: string | null
           has_cash?: boolean
+          has_paper?: boolean | null
           id?: string
           last_updated?: string
           latitude?: number
           longitude?: number
+          provincia?: string | null
+          status?: string | null
           zone_id?: string | null
         }
         Relationships: [
