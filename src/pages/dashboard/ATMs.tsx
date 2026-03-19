@@ -433,7 +433,7 @@ function ATMForm({
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload: Record<string, unknown> = {
+    const payload = {
       bank_name: formData.bank_name,
       address: formData.address,
       latitude: parseFloat(formData.latitude),
