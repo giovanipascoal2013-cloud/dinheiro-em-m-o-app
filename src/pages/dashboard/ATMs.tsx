@@ -445,8 +445,8 @@ function ATMForm({
       fila: formData.fila || null,
       status: formData.status,
       last_updated: new Date().toISOString(),
+      zone_id: formData.zone_id || null,
     };
-    payload.zone_id = formData.zone_id || null;
 
     try {
       if (atm) {
