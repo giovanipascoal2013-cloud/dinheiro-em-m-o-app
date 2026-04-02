@@ -75,15 +75,15 @@ const ZoneDetail = () => {
       .eq('user_id', user!.id)
       .eq('zone_id', id!)
       .eq('status', 'active')
+      .gte('expiry_date', new Date().toISOString())
       .maybeSingle();
 
     setIsSubscribed(!!data);
   };
 
   const handlePaymentSuccess = () => {
-    setIsSubscribed(true);
     setShowPaymentModal(false);
-    toast({ title: 'Subscrição registada!', description: 'Aguarde aprovação do pagamento.' });
+    toast({ title: 'Pagamento registado!', description: 'A sua subscrição será activada após aprovação do pagamento.' });
   };
 
   if (loading) {
