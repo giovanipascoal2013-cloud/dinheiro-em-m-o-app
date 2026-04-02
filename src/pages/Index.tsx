@@ -92,6 +92,19 @@ const Index = () => {
     }
 
     switch (sortBy) {
+      case 'proximity':
+        if (userLocation) {
+          result.sort((a, b) =>
+            haversineDistance(userLocation.lat, userLocation.lng, a.latitude, a.longitude) -
+            haversineDistance(userLocation.lat, userLocation.lng, b.latitude, b.longitude)
+          );
+        } else {
+          result.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        break;
+      case 'recent':
+        result.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        break;
       case 'price_asc':
         result.sort((a, b) => a.price_kz - b.price_kz);
         break;
