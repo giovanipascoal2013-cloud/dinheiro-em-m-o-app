@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Search, Users, X, MapPin } from 'lucide-react';
+import { useEffect, useState, useMemo } from 'react';
+import { Search, Users, X, MapPin, Filter } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,7 +19,7 @@ interface AgentZone {
 }
 interface Agent {
   id: string; user_id: string; role: string;
-  profiles: { nome: string | null; telefone: string } | null;
+  profiles: { nome: string | null; telefone: string; provincia?: string | null; cidade?: string | null } | null;
   agent_zones: AgentZone[];
 }
 interface Zone { id: string; name: string; status: string; }
@@ -29,6 +29,9 @@ export default function AgentsPage() {
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterProvincia, setFilterProvincia] = useState('all');
+  const [filterCidade, setFilterCidade] = useState('all');
+  const [showFilters, setShowFilters] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [selectedZoneId, setSelectedZoneId] = useState('');
@@ -47,11 +50,11 @@ export default function AgentsPage() {
     const agentUserIds = agentRoles.map((a: any) => a.user_id);
 
     const [profilesRes, agentZonesRes] = await Promise.all([
-      supabase.from('profiles').select('user_id, nome, telefone').in('user_id', agentUserIds.length > 0 ? agentUserIds : ['none']),
+      supabase.from('profiles').select('user_id, nome, telefone, provincia, cidade').in('user_id', agentUserIds.length > 0 ? agentUserIds : ['none']),
       supabase.from('agent_zones').select('id, zone_id, referral_code, agent_id').in('agent_id', agentUserIds.length > 0 ? agentUserIds : ['none']),
     ]);
 
-    const profilesMap = new Map((profilesRes.data || []).map(p => [p.user_id, p]));
+    const profilesMap = new Map((profilesRes.data || []).map((p: any) => [p.user_id, p]));
     const zoneMap = new Map((zonesRes.data || []).map(z => [z.id, z.name]));
 
     const enrichedAgents: Agent[] = agentRoles.map((a: any) => ({
@@ -66,6 +69,38 @@ export default function AgentsPage() {
     setZones(zonesRes.data || []);
     setIsLoading(false);
   };
+
+  // Extract unique provincias and cidades for filters
+  const { provincias, cidades } = useMemo(() => {
+    const provSet = new Set<string>();
+    const cidSet = new Set<string>();
+    agents.forEach(a => {
+      if (a.profiles?.provincia) provSet.add(a.profiles.provincia);
+      if (a.profiles?.cidade) cidSet.add(a.profiles.cidade);
+    });
+    return { provincias: Array.from(provSet).sort(), cidades: Array.from(cidSet).sort() };
+  }, [agents]);
+
+  const filteredAgents = useMemo(() => {
+    let result = agents;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(a =>
+        a.profiles?.nome?.toLowerCase().includes(q) ||
+        a.profiles?.telefone?.includes(q) ||
+        a.profiles?.provincia?.toLowerCase().includes(q) ||
+        a.profiles?.cidade?.toLowerCase().includes(q) ||
+        a.agent_zones.some(az => az.zones?.name?.toLowerCase().includes(q) || az.referral_code.toLowerCase().includes(q))
+      );
+    }
+    if (filterProvincia !== 'all') {
+      result = result.filter(a => a.profiles?.provincia === filterProvincia);
+    }
+    if (filterCidade !== 'all') {
+      result = result.filter(a => a.profiles?.cidade === filterCidade);
+    }
+    return result;
+  }, [agents, searchQuery, filterProvincia, filterCidade]);
 
   const handleAssignZone = async () => {
     if (!selectedAgent || !selectedZoneId) return;
@@ -83,7 +118,6 @@ export default function AgentsPage() {
     });
 
     if (!error) {
-      // Auto-activate zone if suspended
       const zone = zones.find(z => z.id === selectedZoneId);
       if (zone && zone.status !== 'active') {
         await supabase.from('zones').update({ status: 'active' }).eq('id', selectedZoneId);
@@ -103,11 +137,6 @@ export default function AgentsPage() {
     else toast({ title: 'Erro', description: error.message, variant: 'destructive' });
   };
 
-  const filteredAgents = agents.filter(a =>
-    a.profiles?.nome?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.profiles?.telefone?.includes(searchQuery)
-  );
-
   const getAvailableZones = () => {
     if (!selectedAgent) return zones;
     const assignedIds = new Set(selectedAgent.agent_zones.map(az => az.zone_id));
@@ -115,12 +144,42 @@ export default function AgentsPage() {
   };
 
   return (
-    <DashboardLayout title="Agentes" subtitle="Gerir agentes">
-      <div className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Pesquisar agentes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+    <DashboardLayout title="Agentes" subtitle={`${filteredAgents.length} agente${filteredAgents.length !== 1 ? 's' : ''}`}>
+      {/* Search + Filter bar */}
+      <div className="mb-4 space-y-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Pesquisar por nome, telefone, zona, código..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-10" />
+          </div>
+          <Button variant={showFilters ? 'secondary' : 'outline'} size="icon" onClick={() => setShowFilters(!showFilters)}>
+            <Filter className="h-4 w-4" />
+          </Button>
         </div>
+
+        {showFilters && (
+          <div className="flex flex-wrap gap-2 animate-fade-in">
+            <Select value={filterProvincia} onValueChange={setFilterProvincia}>
+              <SelectTrigger className="w-40 h-9 text-xs"><SelectValue placeholder="Província" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas províncias</SelectItem>
+                {provincias.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filterCidade} onValueChange={setFilterCidade}>
+              <SelectTrigger className="w-40 h-9 text-xs"><SelectValue placeholder="Cidade" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas cidades</SelectItem>
+                {cidades.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {(filterProvincia !== 'all' || filterCidade !== 'all') && (
+              <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={() => { setFilterProvincia('all'); setFilterCidade('all'); }}>
+                <X className="h-3 w-3 mr-1" />Limpar
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -142,6 +201,12 @@ export default function AgentsPage() {
                   <div className="min-w-0">
                     <p className="font-medium text-foreground text-sm truncate">{agent.profiles?.nome || 'Agente'}</p>
                     <p className="text-xs text-muted-foreground">{agent.profiles?.telefone}</p>
+                    {(agent.profiles?.provincia || agent.profiles?.cidade) && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <MapPin className="h-3 w-3" />
+                        {[agent.profiles.cidade, agent.profiles.provincia].filter(Boolean).join(', ')}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="h-8 text-xs shrink-0" onClick={() => { setSelectedAgent(agent); setSelectedZoneId(''); setAssignDialogOpen(true); }}>
