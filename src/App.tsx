@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/zone/:id" element={<ZoneDetail />} />
             <Route path="/my-zones" element={<MyZones />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/auth" element={<Auth />} />
             
             {/* Dashboard routes */}

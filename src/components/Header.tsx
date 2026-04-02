@@ -78,11 +78,11 @@ export function Header() {
             {isLoggedIn ? (
               <div className="flex items-center gap-2">
                 <Link
-                  to="/my-zones"
+                  to="/profile"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                 >
                   <User className="h-4 w-4" />
-                  <span className="hidden sm:block">Minha Conta</span>
+                  <span className="hidden sm:block">Perfil</span>
                 </Link>
                 <button
                   onClick={handleLogout}
