@@ -10,6 +10,7 @@ export interface ZoneCardData {
   price_kz: number;
   status: string;
   atm_count?: number;
+  updated_at?: string;
 }
 
 interface ZoneCardProps {
