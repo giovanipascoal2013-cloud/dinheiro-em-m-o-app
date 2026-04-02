@@ -14,11 +14,8 @@ export function Header() {
 
   const handleLogout = async () => {
     await signOut();
-    toast({
-      title: 'Sessão terminada',
-      description: 'Até breve!',
-    });
-    navigate('/');
+    toast({ title: 'Sessão terminada', description: 'Até breve!' });
+    window.location.href = '/';
   };
 
   // Determine which dashboard to link to based on role
