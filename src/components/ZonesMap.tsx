@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { ZoneCardData } from '@/components/ZoneCard';
-import { MapPin, X, Navigation } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
+const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGluaGVpcm9lbW1hbyIsImEiOiJjbW15eG83OGcwMmlvMm9yNG1mZnJ2MmV6In0.40U0QUqTx_3joFZkLj5uFQ';
+
 interface ZonesMapProps {
   zones: ZoneCardData[];
+  subscribedZoneIds?: Set<string>;
   onZoneSelect?: (zoneId: string) => void;
   className?: string;
 }
@@ -23,87 +26,71 @@ interface ATMMarkerData {
   status: string | null;
   cidade: string | null;
   fila: string | null;
+  zone_id: string | null;
 }
 
-const MAPBOX_TOKEN_KEY = 'mapbox_token';
-
-export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, onZoneSelect, className = '' }) => {
+export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = new Set(), onZoneSelect, className = '' }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
   const atmMarkersRef = useRef<mapboxgl.Marker[]>([]);
-  
-  const [mapboxToken, setMapboxToken] = useState(() => localStorage.getItem(MAPBOX_TOKEN_KEY) || '');
-  const [isTokenSet, setIsTokenSet] = useState(() => !!localStorage.getItem(MAPBOX_TOKEN_KEY));
-  const [tokenInput, setTokenInput] = useState('');
+
   const [selectedZone, setSelectedZone] = useState<ZoneCardData | null>(null);
-  const [mapError, setMapError] = useState<string | null>(null);
   const [atms, setAtms] = useState<ATMMarkerData[]>([]);
-
-  const handleSetToken = () => {
-    if (tokenInput.trim()) {
-      localStorage.setItem(MAPBOX_TOKEN_KEY, tokenInput.trim());
-      setMapboxToken(tokenInput.trim());
-      setIsTokenSet(true);
-      setMapError(null);
-    }
-  };
-
-  const handleResetToken = () => {
-    localStorage.removeItem(MAPBOX_TOKEN_KEY);
-    setMapboxToken('');
-    setIsTokenSet(false);
-    setTokenInput('');
-    if (map.current) {
-      map.current.remove();
-      map.current = null;
-    }
-  };
 
   // Fetch ATMs
   useEffect(() => {
     const fetchATMs = async () => {
-      const { data } = await supabase.from('atms').select('id, bank_name, address, latitude, longitude, has_cash, has_paper, status, cidade, fila');
+      const { data } = await supabase.from('atms').select('id, bank_name, address, latitude, longitude, has_cash, has_paper, status, cidade, fila, zone_id');
       if (data) setAtms(data as ATMMarkerData[]);
     };
     fetchATMs();
   }, []);
 
   useEffect(() => {
-    if (!mapContainer.current || !isTokenSet || !mapboxToken) return;
+    if (!mapContainer.current) return;
 
-    try {
-      mapboxgl.accessToken = mapboxToken;
+    mapboxgl.accessToken = MAPBOX_TOKEN;
 
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
-        center: [13.2344, -8.8390],
-        zoom: 11,
-        pitch: 45,
-      });
+    map.current = new mapboxgl.Map({
+      container: mapContainer.current,
+      style: 'mapbox://styles/mapbox/dark-v11',
+      center: [13.2344, -8.8390],
+      zoom: 11,
+      pitch: 45,
+    });
 
-      map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
+    map.current.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'top-right');
 
-      map.current.on('error', (e) => {
-        const error = e.error as { status?: number } | undefined;
-        if (error?.status === 401) {
-          setMapError('Token inválido. Por favor, verifique o seu token Mapbox.');
-          handleResetToken();
-        }
-      });
+    // Geolocate control
+    const geolocate = new mapboxgl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: false,
+      showUserLocation: true,
+    });
+    map.current.addControl(geolocate, 'top-right');
 
-      map.current.on('load', () => {
-        addZoneMarkers();
-        updateATMMarkers();
-      });
+    map.current.on('load', () => {
+      addZoneMarkers();
+      updateATMMarkers();
 
-      map.current.on('zoomend', () => {
-        updateATMMarkers();
-      });
-    } catch {
-      setMapError('Erro ao inicializar o mapa.');
-    }
+      // Request geolocation
+      navigator.geolocation?.getCurrentPosition(
+        (pos) => {
+          map.current?.flyTo({
+            center: [pos.coords.longitude, pos.coords.latitude],
+            zoom: 13,
+            duration: 1500,
+          });
+        },
+        () => { /* keep default center */ },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    });
+
+    map.current.on('zoomend', () => {
+      updateATMMarkers();
+    });
 
     return () => {
       markersRef.current.forEach(marker => marker.remove());
@@ -112,7 +99,7 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, onZoneSelect, classNa
       atmMarkersRef.current = [];
       map.current?.remove();
     };
-  }, [isTokenSet, mapboxToken]);
+  }, []);
 
   const addZoneMarkers = () => {
     if (!map.current) return;
@@ -152,24 +139,21 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, onZoneSelect, classNa
     if (!map.current) return;
     const zoom = map.current.getZoom();
 
-    // Remove existing ATM markers
     atmMarkersRef.current.forEach(marker => marker.remove());
     atmMarkersRef.current = [];
 
-    // Only show ATM markers when zoomed in enough
     if (zoom < 13) return;
 
     const bounds = map.current.getBounds();
 
     atms.forEach((atm) => {
-      // Only show ATMs within viewport
       if (!bounds.contains([atm.longitude, atm.latitude])) return;
 
-      let color = '#22c55e'; // green - has cash
+      let color = '#22c55e';
       if (atm.status === 'Fora de Serviço') {
-        color = '#6b7280'; // gray
+        color = '#6b7280';
       } else if (!atm.has_cash) {
-        color = '#ef4444'; // red
+        color = '#ef4444';
       }
 
       const el = document.createElement('div');
@@ -180,23 +164,41 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, onZoneSelect, classNa
         </div>
       `;
 
-      const popup = new mapboxgl.Popup({ offset: 25, closeButton: false }).setHTML(`
-        <div style="padding:8px;min-width:180px;">
-          <strong style="font-size:13px;">${atm.bank_name}</strong>
-          <p style="margin:4px 0;font-size:11px;color:#888;">${atm.address}</p>
-          ${atm.cidade ? `<p style="font-size:11px;color:#888;">${atm.cidade}</p>` : ''}
-          <div style="display:flex;gap:8px;margin-top:6px;font-size:11px;">
-            <span style="color:${atm.has_cash ? '#22c55e' : '#ef4444'}">💰 ${atm.has_cash ? 'Com dinheiro' : 'Sem dinheiro'}</span>
-            <span style="color:${atm.has_paper ? '#22c55e' : '#ef4444'}">📄 ${atm.has_paper ? 'Com papel' : 'Sem papel'}</span>
-          </div>
-          ${atm.fila ? `<p style="font-size:11px;margin-top:4px;">🕐 ${atm.fila}</p>` : ''}
-          ${atm.status && atm.status !== 'Operacional' ? `<p style="font-size:11px;color:#ef4444;margin-top:4px;">⚠️ ${atm.status}</p>` : ''}
-        </div>
-      `);
+      const isSubscribed = atm.zone_id ? subscribedZoneIds.has(atm.zone_id) : false;
+      const zone = atm.zone_id ? zones.find(z => z.id === atm.zone_id) : null;
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+
+        if (isSubscribed || !atm.zone_id) {
+          // Show full ATM info
+          const popup = new mapboxgl.Popup({ offset: 25, closeButton: true, maxWidth: '260px' }).setHTML(`
+            <div style="padding:8px;min-width:180px;">
+              <strong style="font-size:13px;">${atm.bank_name}</strong>
+              <p style="margin:4px 0;font-size:11px;color:#888;">${atm.address}</p>
+              ${atm.cidade ? `<p style="font-size:11px;color:#888;">${atm.cidade}</p>` : ''}
+              <div style="display:flex;gap:8px;margin-top:6px;font-size:11px;">
+                <span style="color:${atm.has_cash ? '#22c55e' : '#ef4444'}">💰 ${atm.has_cash ? 'Com dinheiro' : 'Sem dinheiro'}</span>
+                <span style="color:${atm.has_paper ? '#22c55e' : '#ef4444'}">📄 ${atm.has_paper ? 'Com papel' : 'Sem papel'}</span>
+              </div>
+              ${atm.fila ? `<p style="font-size:11px;margin-top:4px;">🕐 ${atm.fila}</p>` : ''}
+              ${atm.status && atm.status !== 'Operacional' ? `<p style="font-size:11px;color:#ef4444;margin-top:4px;">⚠️ ${atm.status}</p>` : ''}
+            </div>
+          `);
+          popup.setLngLat([atm.longitude, atm.latitude]).addTo(map.current!);
+        } else if (zone) {
+          // Show zone info card
+          setSelectedZone(zone);
+          map.current?.flyTo({
+            center: [zone.longitude, zone.latitude],
+            zoom: 14,
+            duration: 1000,
+          });
+        }
+      });
 
       const marker = new mapboxgl.Marker(el)
         .setLngLat([atm.longitude, atm.latitude])
-        .setPopup(popup)
         .addTo(map.current!);
 
       atmMarkersRef.current.push(marker);
@@ -204,60 +206,20 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, onZoneSelect, classNa
   };
 
   useEffect(() => {
-    if (map.current && isTokenSet) {
+    if (map.current) {
       addZoneMarkers();
       updateATMMarkers();
     }
-  }, [zones, atms, isTokenSet]);
+  }, [zones, atms, subscribedZoneIds]);
 
   const handleViewZone = () => {
     if (selectedZone && onZoneSelect) onZoneSelect(selectedZone.id);
   };
 
-  if (!isTokenSet) {
-    return (
-      <div className={`relative rounded-2xl overflow-hidden bg-card border border-border ${className}`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5" />
-        <div className="relative p-6 md:p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <MapPin className="h-8 w-8 text-primary" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground mb-2">Mapa de Zonas</h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-            Para ver o mapa interactivo, introduza o seu token público do Mapbox.{' '}
-            <a href="https://mapbox.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">mapbox.com</a>
-          </p>
-          {mapError && (
-            <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-              {mapError}
-            </div>
-          )}
-          <div className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
-            <input
-              type="text"
-              placeholder="pk.eyJ1Ijo..."
-              value={tokenInput}
-              onChange={(e) => setTokenInput(e.target.value)}
-              className="flex-1 h-11 px-4 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all text-sm"
-            />
-            <Button onClick={handleSetToken} disabled={!tokenInput.trim()}>Activar Mapa</Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={`relative rounded-2xl overflow-hidden ${className}`}>
       <div ref={mapContainer} className="w-full h-full min-h-[400px]" />
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
-      <button
-        onClick={handleResetToken}
-        className="absolute top-3 left-3 p-2 bg-card/90 backdrop-blur-sm rounded-lg border border-border/50 text-muted-foreground hover:text-foreground transition-colors"
-        title="Alterar token Mapbox"
-      >
-        <Navigation className="h-4 w-4" />
-      </button>
 
       {/* Legend */}
       <div className="absolute top-3 right-14 bg-card/90 backdrop-blur-sm rounded-lg border border-border/50 px-3 py-2 text-xs">
