@@ -40,6 +40,10 @@ const Index = () => {
 
   useEffect(() => {
     fetchZones();
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setSortBy('recent')
+    );
   }, []);
 
   useEffect(() => {
