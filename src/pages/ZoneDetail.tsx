@@ -80,6 +80,8 @@ const ZoneDetail = () => {
     );
   }
 
+  const effectivePrice = zone.price_kz > 0 ? zone.price_kz : atms.length * 500;
+
   const atmStats = {
     available: atms.filter(a => a.has_cash).length,
     unavailable: atms.filter(a => !a.has_cash).length,
