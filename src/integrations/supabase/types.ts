@@ -140,27 +140,33 @@ export type Database = {
       }
       profiles: {
         Row: {
+          cidade: string | null
           created_at: string
           id: string
           nome: string | null
+          provincia: string | null
           role: string
           telefone: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          cidade?: string | null
           created_at?: string
           id?: string
           nome?: string | null
+          provincia?: string | null
           role?: string
           telefone: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          cidade?: string | null
           created_at?: string
           id?: string
           nome?: string | null
+          provincia?: string | null
           role?: string
           telefone?: string
           updated_at?: string
