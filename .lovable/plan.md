@@ -1,68 +1,42 @@
 
 
-## Plano: Adaptar DB para CSV + Importar ATMs + Manter Mapbox
+## Plano: Geolocalização + Token hardcoded + Comportamento ATM por subscrição
 
-### 1. Corrigir build (dependências)
-
-**Ficheiro:** `package.json`
-- Remover `@vis.gl/react-google-maps` (que quebrou o build)
-- Manter `mapbox-gl` e `@types/mapbox-gl`
-
-### 2. Migração DB: Adicionar colunas à tabela `atms`
-
-O CSV tem colunas que não existem na tabela actual. Adicionar:
-
-| Coluna CSV | Nova coluna DB | Tipo | Default |
-|---|---|---|---|
-| cidade | `cidade` | text | null |
-| Fila | `fila` | text | null |
-| papel | `has_paper` | boolean | true |
-| provincia | `provincia` | text | null |
-| status | `status` | text | 'Operacional' |
-
-```sql
-ALTER TABLE public.atms
-  ADD COLUMN IF NOT EXISTS cidade text,
-  ADD COLUMN IF NOT EXISTS fila text,
-  ADD COLUMN IF NOT EXISTS has_paper boolean DEFAULT true,
-  ADD COLUMN IF NOT EXISTS provincia text,
-  ADD COLUMN IF NOT EXISTS status text DEFAULT 'Operacional';
-```
-
-### 3. Importar 113 ATMs do CSV
-
-Usar a ferramenta de inserção para fazer INSERT dos 113 ATMs. Mapeamento:
-- `name` → `bank_name`
-- `cash` ("Sim"/"Não") → `has_cash` (true/false)
-- `papel` ("Sim"/"Não") → `has_paper` (true/false)
-- `status` ("Operacional"/"Sob Manutenção"/"Fora de Serviço") → `status`
-- `zone_id` → null (atribuir depois)
-
-### 4. Actualizar formulário e listagem de ATMs
-
-**Ficheiro:** `src/pages/dashboard/ATMs.tsx`
-- Adicionar campos ao formulário: cidade, fila, has_paper, provincia, status
-- Mostrar cidade, provincia e status na tabela
-- Adicionar filtro por cidade e por status operacional
-
-### 5. Actualizar tipos e cards
-
-**Ficheiro:** `src/types/index.ts` — Actualizar interface ATM com novos campos
-**Ficheiro:** `src/components/ATMList.tsx` — Adaptar ao novo campo `status` (Operacional/Sob Manutenção/Fora de Serviço) em vez de apenas `status_atm`
-
-### 6. Mostrar ATMs no mapa
+### 1. Hardcode do token Mapbox
 
 **Ficheiro:** `src/components/ZonesMap.tsx`
-- Manter Mapbox como está
-- Quando zoom > 13, fazer query aos ATMs e mostrar marcadores individuais
-- Cores: verde = com dinheiro, vermelho = sem dinheiro, cinza = fora de serviço
+
+- Remover toda a lógica de localStorage para token (states `mapboxToken`, `isTokenSet`, `tokenInput`, funções `handleSetToken`, `handleResetToken`)
+- Remover o UI de input do token (o bloco `if (!isTokenSet)`)
+- Remover o botão de reset do token no mapa
+- Usar directamente: `mapboxgl.accessToken = 'pk.eyJ1IjoiZGluaGVpcm9lbW1hbyIsImEiOiJjbW15eG83OGcwMmlvMm9yNG1mZnJ2MmV6In0.40U0QUqTx_3joFZkLj5uFQ'`
+
+### 2. Pedir permissão de localização e centralizar mapa
+
+**Ficheiro:** `src/components/ZonesMap.tsx`
+
+- No `useEffect` de inicialização do mapa, após criar o mapa, chamar `navigator.geolocation.getCurrentPosition()`
+- Se o utilizador permitir, fazer `map.flyTo({ center: [lng, lat], zoom: 13 })`
+- Se negar ou falhar, manter o centro padrão de Luanda `[13.2344, -8.8390]`
+- Adicionar `mapboxgl.GeolocateControl` para o utilizador poder re-centrar
+
+### 3. Ao clicar num ATM: comportamento baseado em subscrição
+
+**Ficheiro:** `src/components/ZonesMap.tsx`
+
+- Adicionar prop `subscribedZoneIds: Set<string>` ao componente
+- Fetch ATMs agora inclui `zone_id` no select
+- Actualizar `ATMMarkerData` para incluir `zone_id: string | null`
+- Ao clicar num marcador de ATM:
+  - Se o ATM tem `zone_id` e o utilizador **está subscrito** a essa zona → mostrar popup com info completa do ATM (banco, endereço, dinheiro, papel, fila, estado)
+  - Se **não está subscrito** → mostrar card da zona a que pertence (nome, preço, ATM count) com botão "Ver Zona" que navega para `/zone/{zoneId}`
+  - Se ATM não tem `zone_id` → mostrar apenas info básica (banco e endereço)
+
+**Ficheiro:** `src/pages/Index.tsx`
+
+- Passar `subscribedZoneIds` como prop para `<ZonesMap>`
 
 ### Ficheiros a modificar:
-1. `package.json` — remover google maps package
-2. **Migração SQL** — adicionar 5 colunas à tabela `atms`
-3. **Inserção SQL** — importar 113 ATMs do CSV
-4. `src/pages/dashboard/ATMs.tsx` — formulário e listagem com novos campos
-5. `src/components/ATMList.tsx` — adaptar status
-6. `src/types/index.ts` — actualizar tipos
-7. `src/components/ZonesMap.tsx` — mostrar ATMs ao fazer zoom
+1. `src/components/ZonesMap.tsx` — token hardcoded, geolocalização, lógica de clique baseada em subscrição
+2. `src/pages/Index.tsx` — passar `subscribedZoneIds` ao mapa
 
