@@ -36,28 +36,17 @@ const Index = () => {
   }, [user]);
 
   const fetchZones = async () => {
-    const { data: zonesData } = await supabase
-      .from('zones')
-      .select('*')
-      .eq('status', 'active');
+    const [zonesRes, atmsRes] = await Promise.all([
+      supabase.from('zones').select('*').eq('status', 'active'),
+      supabase.from('atms').select('zone_id'),
+    ]);
 
-    if (zonesData) {
-      // Get ATM counts per zone
-      const { data: atmsData } = await supabase
-        .from('atms')
-        .select('zone_id');
-
+    if (zonesRes.data) {
       const atmCounts: Record<string, number> = {};
-      atmsData?.forEach(atm => {
-        if (atm.zone_id) {
-          atmCounts[atm.zone_id] = (atmCounts[atm.zone_id] || 0) + 1;
-        }
+      atmsRes.data?.forEach(atm => {
+        if (atm.zone_id) atmCounts[atm.zone_id] = (atmCounts[atm.zone_id] || 0) + 1;
       });
-
-      setZones(zonesData.map(z => ({
-        ...z,
-        atm_count: atmCounts[z.id] || 0,
-      })));
+      setZones(zonesRes.data.map(z => ({ ...z, atm_count: atmCounts[z.id] || 0 })));
     }
     setLoading(false);
   };
