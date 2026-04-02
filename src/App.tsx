@@ -62,7 +62,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/withdrawals" element={
-              <ProtectedRoute requiredRoles={['admin']}>
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
                 <WithdrawalsPage />
               </ProtectedRoute>
             } />

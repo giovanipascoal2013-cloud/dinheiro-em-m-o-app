@@ -68,7 +68,8 @@ const Index = () => {
       .from('subscriptions')
       .select('zone_id')
       .eq('user_id', user.id)
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .gte('expiry_date', new Date().toISOString());
 
     if (data) {
       setSubscribedZoneIds(new Set(data.map(s => s.zone_id)));

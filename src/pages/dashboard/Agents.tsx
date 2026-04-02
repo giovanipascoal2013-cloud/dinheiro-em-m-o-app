@@ -57,15 +57,28 @@ export default function AgentsPage() {
 
   const fetchData = async () => {
     setIsLoading(true);
-    const [agentsRes, zonesRes] = await Promise.all([
+    const [rolesRes, zonesRes] = await Promise.all([
       supabase
         .from('user_roles')
-        .select(`*, profiles:user_id (nome, telefone)`)
+        .select('*')
         .eq('role', 'agent'),
       supabase.from('zones').select('id, name').eq('status', 'active'),
     ]);
 
-    const agentList = (agentsRes.data || []) as any[];
+    const agentRoles = (rolesRes.data || []) as any[];
+    const agentUserIds = agentRoles.map((a: any) => a.user_id);
+
+    // Fetch profiles separately (no FK between user_roles and profiles)
+    const { data: profilesData } = await supabase
+      .from('profiles')
+      .select('user_id, nome, telefone')
+      .in('user_id', agentUserIds.length > 0 ? agentUserIds : ['none']);
+
+    const profilesMap = new Map((profilesData || []).map(p => [p.user_id, p]));
+    const agentList = agentRoles.map((a: any) => ({
+      ...a,
+      profiles: profilesMap.get(a.user_id) || null,
+    }));
 
     // Fetch agent_zones for all agents
     const agentIds = agentList.map((a) => a.user_id);

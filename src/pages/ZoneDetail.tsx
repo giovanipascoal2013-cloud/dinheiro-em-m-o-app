@@ -82,9 +82,8 @@ const ZoneDetail = () => {
   };
 
   const handlePaymentSuccess = () => {
-    setIsSubscribed(true);
     setShowPaymentModal(false);
-    toast({ title: 'Subscrição registada!', description: 'Aguarde aprovação do pagamento.' });
+    toast({ title: 'Pagamento registado!', description: 'A sua subscrição será activada após aprovação do pagamento.' });
   };
 
   if (loading) {
