@@ -19,7 +19,7 @@ import UsersPage from "./pages/dashboard/Users";
 import SubscriptionsPage from "./pages/dashboard/Subscriptions";
 import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AgentDashboard from "./pages/AgentDashboard";
-
+import Profile from "./pages/Profile";
 const queryClient = new QueryClient();
 
 const App = () => (
