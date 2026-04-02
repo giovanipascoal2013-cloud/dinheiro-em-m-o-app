@@ -10,25 +10,40 @@ import { useAuth } from '@/hooks/useAuth';
 import logoIcon from '@/assets/logo-icon.png';
 
 const sortOptions = [
+  { value: 'proximity', label: 'Mais perto' },
   { value: 'price_asc', label: 'Menor preço' },
   { value: 'price_desc', label: 'Maior preço' },
   { value: 'atms', label: 'Mais ATMs' },
   { value: 'name', label: 'Nome A-Z' },
+  { value: 'recent', label: 'Recentes' },
 ];
+
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const Index = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('name');
+  const [sortBy, setSortBy] = useState('proximity');
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [zones, setZones] = useState<ZoneCardData[]>([]);
   const [subscribedZoneIds, setSubscribedZoneIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     fetchZones();
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => setSortBy('recent')
+    );
   }, []);
 
   useEffect(() => {
@@ -77,6 +92,19 @@ const Index = () => {
     }
 
     switch (sortBy) {
+      case 'proximity':
+        if (userLocation) {
+          result.sort((a, b) =>
+            haversineDistance(userLocation.lat, userLocation.lng, a.latitude, a.longitude) -
+            haversineDistance(userLocation.lat, userLocation.lng, b.latitude, b.longitude)
+          );
+        } else {
+          result.sort((a, b) => a.name.localeCompare(b.name));
+        }
+        break;
+      case 'recent':
+        result.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        break;
       case 'price_asc':
         result.sort((a, b) => a.price_kz - b.price_kz);
         break;

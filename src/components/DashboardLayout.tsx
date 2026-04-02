@@ -50,7 +50,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    window.location.href = '/';
   };
 
   const filteredNavItems = navItems.filter(item => {

@@ -80,6 +80,8 @@ const ZoneDetail = () => {
     );
   }
 
+  const effectivePrice = zone.price_kz > 0 ? zone.price_kz : atms.length * 500;
+
   const atmStats = {
     available: atms.filter(a => a.has_cash).length,
     unavailable: atms.filter(a => !a.has_cash).length,
@@ -124,7 +126,7 @@ const ZoneDetail = () => {
               <p className="text-xs text-muted-foreground">ATMs</p>
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-foreground">{zone.price_kz}</p>
+              <p className="text-xl font-bold text-foreground">{effectivePrice}</p>
               <p className="text-xs text-muted-foreground">KZ / mês</p>
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
@@ -199,17 +201,17 @@ const ZoneDetail = () => {
             <h2 className="text-lg font-bold text-foreground mb-2">Acesso à Zona Bloqueado</h2>
             <p className="text-muted-foreground text-sm mb-5">
               Subscreva para ver o estado dos {atms.length} ATMs.
-              Acesso mensal por apenas <strong>{zone.price_kz} KZ</strong>.
+              Acesso mensal por apenas <strong>{effectivePrice} KZ</strong>.
             </p>
-            <Button variant="hero" size="lg" className="w-full" onClick={() => setShowPaymentModal(true)}>
-              Subscrever por {zone.price_kz} KZ
+            <Button variant="hero" size="lg" className="w-full" onClick={() => setShowPaymentModal(true)} disabled={effectivePrice === 0}>
+              {effectivePrice === 0 ? 'Preço ainda não definido' : `Subscrever por ${effectivePrice} KZ`}
             </Button>
             <p className="text-xs text-muted-foreground mt-3">Pagamento seguro via Multicaixa Express</p>
           </div>
         )}
       </main>
 
-      <PaymentModal zone={zone} isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSuccess={handlePaymentSuccess} />
+      <PaymentModal zone={{ ...zone, price_kz: effectivePrice }} isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSuccess={handlePaymentSuccess} />
     </div>
   );
 };
