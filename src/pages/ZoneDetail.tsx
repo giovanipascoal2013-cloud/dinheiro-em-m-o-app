@@ -75,6 +75,7 @@ const ZoneDetail = () => {
       .eq('user_id', user!.id)
       .eq('zone_id', id!)
       .eq('status', 'active')
+      .gte('expiry_date', new Date().toISOString())
       .maybeSingle();
 
     setIsSubscribed(!!data);
