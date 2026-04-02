@@ -211,7 +211,7 @@ const ZoneDetail = () => {
         )}
       </main>
 
-      <PaymentModal zone={zone} isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSuccess={handlePaymentSuccess} />
+      <PaymentModal zone={{ ...zone, price_kz: effectivePrice }} isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSuccess={handlePaymentSuccess} />
     </div>
   );
 };
