@@ -59,6 +59,7 @@ export type Database = {
           last_updated: string
           latitude: number
           longitude: number
+          obs: string | null
           provincia: string | null
           status: string | null
           zone_id: string | null
@@ -75,6 +76,7 @@ export type Database = {
           last_updated?: string
           latitude: number
           longitude: number
+          obs?: string | null
           provincia?: string | null
           status?: string | null
           zone_id?: string | null
@@ -91,6 +93,7 @@ export type Database = {
           last_updated?: string
           latitude?: number
           longitude?: number
+          obs?: string | null
           provincia?: string | null
           status?: string | null
           zone_id?: string | null
