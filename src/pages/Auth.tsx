@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, Mail } from 'lucide-react';
+import { Phone, Lock, Eye, EyeOff, ArrowRight, Loader2, Mail, User, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -8,6 +8,12 @@ import logoIcon from '@/assets/logo-icon.png';
 
 type AuthMode = 'login' | 'register';
 type LoginMethod = 'phone' | 'email';
+
+const PROVINCIAS_ANGOLA = [
+  'Bengo', 'Benguela', 'Bié', 'Cabinda', 'Cuando Cubango', 'Cuanza Norte',
+  'Cuanza Sul', 'Cunene', 'Huambo', 'Huíla', 'Icolo e Bengo', 'Lunda Norte',
+  'Lunda Sul', 'Luanda', 'Malanje', 'Moxico', 'Namibe', 'Uíge', 'Zaire',
+];
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,6 +23,9 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nome, setNome] = useState('');
+  const [provincia, setProvincia] = useState('');
+  const [cidade, setCidade] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -58,8 +67,8 @@ const Auth = () => {
     return /^9\d{8}$/.test(cleaned);
   };
 
-  const validateEmail = (email: string): boolean => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const validateEmail = (em: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em);
   };
 
   const formatPhone = (value: string): string => {
@@ -92,8 +101,13 @@ const Auth = () => {
       newErrors.password = 'A senha deve ter pelo menos 6 caracteres';
     }
 
-    if (mode === 'register' && password !== confirmPassword) {
-      newErrors.confirmPassword = 'As senhas não coincidem';
+    if (mode === 'register') {
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = 'As senhas não coincidem';
+      }
+      if (!nome.trim()) {
+        newErrors.nome = 'O nome é obrigatório';
+      }
     }
 
     setErrors(newErrors);
@@ -148,7 +162,9 @@ const Auth = () => {
             emailRedirectTo: `${window.location.origin}/`,
             data: {
               telefone: loginMethod === 'phone' ? `+244${cleanedPhone}` : '',
-              nome: '',
+              nome: nome.trim(),
+              provincia: provincia || null,
+              cidade: cidade.trim() || null,
             },
           },
         });
@@ -176,6 +192,8 @@ const Auth = () => {
 
     setIsLoading(false);
   };
+
+  const inputClasses = "w-full h-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all";
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -210,7 +228,7 @@ const Auth = () => {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Login method toggle */}
             <div className="flex rounded-xl bg-card border border-border overflow-hidden">
               <button
@@ -229,133 +247,100 @@ const Auth = () => {
               </button>
             </div>
 
-            {/* Phone input */}
+            {/* Phone / Email input */}
             {loginMethod === 'phone' ? (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Número de telefone
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Número de telefone</label>
                 <div className="relative">
                   <div className="absolute left-0 top-0 h-full flex items-center pl-4 pointer-events-none">
                     <span className="text-muted-foreground font-medium">+244</span>
                   </div>
                   <Phone className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type="tel"
-                    value={telefone}
-                    onChange={handlePhoneChange}
-                    placeholder="9XX XXX XXX"
-                    maxLength={11}
-                    className="w-full h-12 pl-16 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
+                  <input type="tel" value={telefone} onChange={handlePhoneChange} placeholder="9XX XXX XXX" maxLength={11} className={`${inputClasses} pl-16 pr-12`} />
                 </div>
-                {errors.telefone && (
-                  <p className="text-destructive text-sm mt-1.5">{errors.telefone}</p>
-                )}
+                {errors.telefone && <p className="text-destructive text-sm mt-1">{errors.telefone}</p>}
               </div>
             ) : (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Email
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: '' })); }}
-                    placeholder="exemplo@email.com"
-                    className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
+                  <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: '' })); }} placeholder="exemplo@email.com" className={`${inputClasses} pl-12 pr-4`} />
                 </div>
-                {errors.email && (
-                  <p className="text-destructive text-sm mt-1.5">{errors.email}</p>
-                )}
+                {errors.email && <p className="text-destructive text-sm mt-1">{errors.email}</p>}
               </div>
             )}
 
-            {/* Password input */}
+            {/* Register-only fields */}
+            {mode === 'register' && (
+              <>
+                {/* Nome */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-1.5">Nome completo *</label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <input type="text" value={nome} onChange={(e) => { setNome(e.target.value); setErrors(prev => ({ ...prev, nome: '' })); }} placeholder="Seu nome completo" maxLength={100} className={`${inputClasses} pl-12 pr-4`} />
+                  </div>
+                  {errors.nome && <p className="text-destructive text-sm mt-1">{errors.nome}</p>}
+                </div>
+
+                {/* Província + Cidade */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">Província</label>
+                    <select value={provincia} onChange={(e) => setProvincia(e.target.value)} className={`${inputClasses} px-3`}>
+                      <option value="">Selecionar...</option>
+                      {PROVINCIAS_ANGOLA.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-1.5">Cidade</label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input type="text" value={cidade} onChange={(e) => setCidade(e.target.value)} placeholder="Ex: Viana" maxLength={80} className={`${inputClasses} pl-9 pr-3`} />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Senha
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Senha</label>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setErrors(prev => ({ ...prev, password: '', general: '' }));
-                  }}
-                  placeholder="••••••••"
-                  className="w-full h-12 pl-12 pr-12 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: '', general: '' })); }} placeholder="••••••••" className={`${inputClasses} pl-12 pr-12`} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                   {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-destructive text-sm mt-1.5">{errors.password}</p>
-              )}
+              {errors.password && <p className="text-destructive text-sm mt-1">{errors.password}</p>}
             </div>
 
-            {/* Confirm password (register only) */}
+            {/* Confirm password */}
             {mode === 'register' && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Confirmar senha
-                </label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Confirmar senha</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                      setErrors(prev => ({ ...prev, confirmPassword: '' }));
-                    }}
-                    placeholder="••••••••"
-                    className="w-full h-12 pl-12 pr-4 bg-card border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
-                  />
+                  <input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }} placeholder="••••••••" className={`${inputClasses} pl-12 pr-4`} />
                 </div>
-                {errors.confirmPassword && (
-                  <p className="text-destructive text-sm mt-1.5">{errors.confirmPassword}</p>
-                )}
+                {errors.confirmPassword && <p className="text-destructive text-sm mt-1">{errors.confirmPassword}</p>}
               </div>
             )}
 
-            {/* Forgot password (login only) */}
+            {/* Forgot password */}
             {mode === 'login' && (
               <div className="text-right">
-                <button
-                  type="button"
-                  className="text-sm text-primary hover:underline"
-                  onClick={() => toast({
-                    title: 'Recuperação de senha',
-                    description: 'Funcionalidade em desenvolvimento. Contacte o suporte.',
-                  })}
-                >
+                <button type="button" className="text-sm text-primary hover:underline" onClick={() => toast({ title: 'Recuperação de senha', description: 'Funcionalidade em desenvolvimento. Contacte o suporte.' })}>
                   Esqueceu a senha?
                 </button>
               </div>
             )}
 
-            {/* Submit button */}
-            <Button
-              type="submit"
-              variant="hero"
-              size="xl"
-              className="w-full"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
+            {/* Submit */}
+            <Button type="submit" variant="hero" size="xl" className="w-full" disabled={isLoading}>
+              {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
                 <>
                   {mode === 'login' ? 'Entrar' : 'Criar conta'}
                   <ArrowRight className="h-5 w-5 ml-2" />
@@ -369,20 +354,13 @@ const Auth = () => {
             <p className="text-muted-foreground">
               {mode === 'login' ? 'Ainda não tem conta?' : 'Já tem uma conta?'}
             </p>
-            <button
-              onClick={() => {
-                setMode(mode === 'login' ? 'register' : 'login');
-                setErrors({});
-              }}
-              className="text-primary font-medium hover:underline mt-1"
-            >
+            <button onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setErrors({}); }} className="text-primary font-medium hover:underline mt-1">
               {mode === 'login' ? 'Criar conta' : 'Entrar'}
             </button>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="py-4 text-center">
         <p className="text-xs text-muted-foreground">
           Ao continuar, aceita os termos de serviço e política de privacidade

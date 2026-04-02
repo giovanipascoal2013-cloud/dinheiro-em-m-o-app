@@ -19,7 +19,7 @@ import UsersPage from "./pages/dashboard/Users";
 import SubscriptionsPage from "./pages/dashboard/Subscriptions";
 import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AgentDashboard from "./pages/AgentDashboard";
-
+import Profile from "./pages/Profile";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/zone/:id" element={<ZoneDetail />} />
             <Route path="/my-zones" element={<MyZones />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/auth" element={<Auth />} />
             
             {/* Dashboard routes */}
