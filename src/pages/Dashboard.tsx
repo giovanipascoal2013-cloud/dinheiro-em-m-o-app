@@ -57,38 +57,26 @@ export default function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      // Fetch zones
-      const { data: zones } = await supabase.from('zones').select('*');
-      const activeZones = zones?.filter(z => z.status === 'active') || [];
+      const [zonesRes, atmsRes, agentRes, subsRes] = await Promise.all([
+        supabase.from('zones').select('id, status'),
+        supabase.from('atms').select('id, has_cash, status'),
+        supabase.from('user_roles').select('*', { count: 'exact', head: true }).eq('role', 'agent'),
+        supabase.from('subscriptions').select('amount_kz').eq('status', 'active'),
+      ]);
 
-      // Fetch ATMs
-      const { data: atms } = await supabase.from('atms').select('*');
-      const atmsWithCash = atms?.filter(a => a.has_cash) || [];
-      const atmsWithoutCash = atms?.filter(a => !a.has_cash) || [];
-
-      // Fetch agent roles count
-      const { count: agentCount } = await supabase
-        .from('user_roles')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'agent');
-
-      // Fetch subscriptions
-      const { data: subs } = await supabase
-        .from('subscriptions')
-        .select('*')
-        .eq('status', 'active');
-
-      const revenue = subs?.reduce((sum, s) => sum + Number(s.amount_kz), 0) || 0;
+      const zones = zonesRes.data || [];
+      const atms = atmsRes.data || [];
+      const revenue = (subsRes.data || []).reduce((sum, s) => sum + Number(s.amount_kz), 0);
 
       setStats({
-        totalZones: zones?.length || 0,
-        activeZones: activeZones.length,
-        totalAtms: atms?.length || 0,
-        atmsWithCash: atmsWithCash.length,
-        atmsWithoutCash: atmsWithoutCash.length,
-        atmsOffline: 0, // We don't have offline status in DB yet
-        totalAgents: agentCount || 0,
-        totalSubscriptions: subs?.length || 0,
+        totalZones: zones.length,
+        activeZones: zones.filter(z => z.status === 'active').length,
+        totalAtms: atms.length,
+        atmsWithCash: atms.filter(a => a.has_cash).length,
+        atmsWithoutCash: atms.filter(a => !a.has_cash).length,
+        atmsOffline: atms.filter(a => a.status === 'Fora de Serviço').length,
+        totalAgents: agentRes.count || 0,
+        totalSubscriptions: subsRes.data?.length || 0,
         revenue,
       });
     } catch (error) {
