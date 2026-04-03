@@ -65,7 +65,7 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Shield; colorCla
   },
 };
 
-type FilterRole = 'all' | 'admin' | 'supervisor' | 'agent';
+type FilterRole = 'all' | 'admin' | 'supervisor' | 'agent' | 'financeiro';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<any[]>([]);
