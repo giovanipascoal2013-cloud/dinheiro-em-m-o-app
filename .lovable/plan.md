@@ -1,41 +1,44 @@
+## Plano: Rodapé profissional com contactos, redes sociais e links legais
 
+### O que será feito
 
-## Plano: Substituir Mapbox por Leaflet (sem WebGL)
+Criar um componente `Footer` reutilizável com 4 secções e aplicá-lo nas páginas públicas.
 
-### Problema
-O Mapbox GL JS requer WebGL, que não está disponível no ambiente de preview do Lovable. Isto causa "Failed to initialize WebGL" e mostra "Mapa indisponível" nos mini-mapas dos formulários de criação de zonas e ATMs. O mesmo problema afecta o `ZonesMap` na landing page.
+### Conteúdo do rodapé
 
-### Solução
-Substituir **mapbox-gl** por **Leaflet + react-leaflet**, que usa tiles raster (sem WebGL). Isto resolve o problema em todos os ambientes.
+**Coluna 1 — Sobre**
 
-### Ficheiros a modificar
+- Logo + nome "Dinheiro em Mão"
+- Texto: "Ajudando você a encontrar caixas eletrônicos operacionais com dinheiro disponível, economizando tempo e frustração."
 
-#### 1. Instalar dependências
-- `npm install leaflet react-leaflet @types/leaflet`
-- Remover `mapbox-gl` e `@types/mapbox-gl`
+**Coluna 2 — Contacte-nos**
 
-#### 2. `src/components/MiniMap.tsx` — reescrever com Leaflet
-- Usar `MapContainer`, `TileLayer`, `Marker` do react-leaflet
-- Tiles: OpenStreetMap (gratuito, sem token)
-- Marcador arrastável com `eventHandlers.dragend` → `onPositionChange`
-- Click no mapa → mover marcador e chamar `onPositionChange`
-- Manter mesma interface (`latitude`, `longitude`, `onPositionChange`, `height`)
+- Email: [docflex.angola@gmail.com](mailto:docflex.angola@gmail.com) (link `mailto:`)
+- Telefone: +244 933 986 318 (link `tel:`)
 
-#### 3. `src/components/ZonesMap.tsx` — reescrever com Leaflet
-- Usar `MapContainer`, `TileLayer`, `Marker`, `Popup` do react-leaflet
-- Tile style escuro: `CartoDB.DarkMatter` (gratuito)
-- Zone markers com ícones customizados (DivIcon)
-- ATM markers com cores condicionais (verde/vermelho/cinza)
-- Popups nativos do Leaflet para info dos ATMs
-- Card de zona seleccionada mantém-se como overlay React
-- Geolocalização via `navigator.geolocation` (já existente)
+**Coluna 3 — Links**
 
-#### 4. Corrigir imports de CSS
-- Adicionar `import 'leaflet/dist/leaflet.css'` nos componentes
-- Fix do ícone padrão do Leaflet (problema conhecido com bundlers)
+- Sobre Nós (âncora ou página futura)
+- Políticas e Condições de Uso (âncora ou página futura)
 
-### Impacto
-- `MiniMap` usado em: `Zones.tsx` (form), `ATMs.tsx` (form)
-- `ZonesMap` usado em: `Index.tsx` (landing page)
-- Interface pública mantém-se idêntica — zero alterações nos consumidores
+**Coluna 4 — Redes Sociais** (ícones com links)
 
+- Facebook: [https://www.facebook.com/share/16vq3AX1ga/?mibextid=wwXIfr](https://www.facebook.com/share/16vq3AX1ga/?mibextid=wwXIfr)
+- WhatsApp: [https://wa.me/244933986318](https://wa.me/244933986318)
+- Instagram: [https://www.instagram.com/dinheiroemmao2?igsh=cWZreWJnMzQ2bGN6](https://www.instagram.com/dinheiroemmao2?igsh=cWZreWJnMzQ2bGN6)
+
+**Barra inferior:** © 2025 Dinheiro em Mão. Feito em Angola 🇦🇴
+
+### Ficheiros a criar/modificar
+
+1. `**src/components/Footer.tsx**` — novo componente reutilizável
+  - Layout responsivo: 4 colunas em desktop, empilhado em mobile
+  - Ícones Lucide: `Mail`, `Phone`, `Facebook`, `Instagram` + ícone SVG inline para WhatsApp (Lucide não tem WhatsApp)
+  - Links externos com `target="_blank"` e `rel="noopener noreferrer"`
+2. **Páginas que receberão o Footer:**
+  - `src/pages/Index.tsx` — substituir o footer inline actual
+  - `src/pages/ZoneDetail.tsx` — adicionar no final
+  - `src/pages/MyZones.tsx` — adicionar no final
+  - `src/pages/Auth.tsx` — adicionar no final
+
+As páginas do dashboard (admin/agente) não recebem este footer pois já têm o `DashboardLayout`.
