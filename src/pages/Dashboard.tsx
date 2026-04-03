@@ -11,6 +11,7 @@ import {
   Eye
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { DashboardHint } from '@/components/DashboardHint';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
