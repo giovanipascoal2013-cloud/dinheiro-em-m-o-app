@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,7 @@ import { Link } from 'react-router-dom';
 const PLATFORM_MARGIN = 0.30;
 
 export default function FinanceDashboard() {
+  const queryClient = useQueryClient();
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [zones, setZones] = useState<any[]>([]);
@@ -155,6 +157,7 @@ export default function FinanceDashboard() {
     } else {
       setPricePerAtm(String(val));
       setEditingPricePerAtm(false);
+      queryClient.invalidateQueries({ queryKey: ['platform_settings', 'price_per_atm'] });
       toast({ title: 'Preço base actualizado' });
     }
     setSavingSettings(false);

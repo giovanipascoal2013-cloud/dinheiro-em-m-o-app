@@ -8,6 +8,7 @@ import { ZonesMap } from '@/components/ZonesMap';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import logoIcon from '@/assets/logo-icon.png';
 import { Footer } from '@/components/Footer';
 
@@ -39,11 +40,10 @@ const Index = () => {
   const [subscribedZoneIds, setSubscribedZoneIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [pricePerAtm, setPricePerAtm] = useState(500);
+  const pricePerAtm = usePricePerAtm();
 
   useEffect(() => {
     fetchZones();
-    fetchPricePerAtm();
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => setSortBy('recent')
@@ -53,11 +53,6 @@ const Index = () => {
   useEffect(() => {
     if (user) fetchSubscriptions();
   }, [user]);
-
-  const fetchPricePerAtm = async () => {
-    const { data } = await supabase.from('platform_settings').select('value').eq('key', 'price_per_atm').single();
-    if (data) setPricePerAtm(Number(data.value) || 500);
-  };
 
   const fetchZones = async () => {
     const [zonesRes, atmsRes] = await Promise.all([

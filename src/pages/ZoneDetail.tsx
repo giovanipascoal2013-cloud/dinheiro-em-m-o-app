@@ -10,6 +10,7 @@ import { pt } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { Footer } from '@/components/Footer';
 import { useAuth } from '@/hooks/useAuth';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { cn } from '@/lib/utils';
 
 interface DBZone {
@@ -34,15 +35,10 @@ const ZoneDetail = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [pricePerAtm, setPricePerAtm] = useState(500);
+  const pricePerAtm = usePricePerAtm();
 
-  useEffect(() => { if (id) { fetchZone(); fetchPricePerAtm(); } }, [id]);
+  useEffect(() => { if (id) { fetchZone(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
-
-  const fetchPricePerAtm = async () => {
-    const { data } = await supabase.from('platform_settings').select('value').eq('key', 'price_per_atm').single();
-    if (data) setPricePerAtm(Number(data.value) || 500);
-  };
 
   const fetchZone = async () => {
     const [zoneRes, atmsRes] = await Promise.all([
