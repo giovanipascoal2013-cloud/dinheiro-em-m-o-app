@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logoIcon from '@/assets/logo-icon.png';
+import { Footer } from '@/components/Footer';
 
 type AuthMode = 'login' | 'register';
 type LoginMethod = 'phone' | 'email';
@@ -361,11 +362,7 @@ const Auth = () => {
         </div>
       </main>
 
-      <footer className="py-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          Ao continuar, aceita os termos de serviço e política de privacidade
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 };

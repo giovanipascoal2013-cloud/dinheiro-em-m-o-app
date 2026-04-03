@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Footer } from '@/components/Footer';
 import { format } from 'date-fns';
 import { pt } from 'date-fns/locale';
 
@@ -139,6 +140,7 @@ export default function MyZones() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
