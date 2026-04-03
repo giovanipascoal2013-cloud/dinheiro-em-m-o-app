@@ -21,6 +21,8 @@ import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AssignmentsPage from "./pages/dashboard/Assignments";
 import AgentDashboard from "./pages/AgentDashboard";
 import Profile from "./pages/Profile";
+import About from "./pages/About";
+import Terms from "./pages/Terms";
 const queryClient = new QueryClient();
 
 const App = () => (
