@@ -1,8 +1,14 @@
+import { useEffect } from 'react';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import logoIcon from '@/assets/logo-icon.png';
 
 export default function About() {
+  useEffect(() => {
+    document.title = 'Sobre Nós — Dinheiro em Mão';
+    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Conheça o Dinheiro em Mão: a plataforma angolana que ajuda a encontrar ATMs com dinheiro disponível através de agentes locais verificados.');
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
