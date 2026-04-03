@@ -53,6 +53,11 @@ const App = () => (
                 <ATMsPage />
               </ProtectedRoute>
             } />
+            <Route path="/dashboard/assignments" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+                <AssignmentsPage />
+              </ProtectedRoute>
+            } />
             <Route path="/dashboard/agents" element={
               <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
                 <AgentsPage />

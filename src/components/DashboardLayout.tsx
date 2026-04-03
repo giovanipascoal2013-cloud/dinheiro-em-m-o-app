@@ -36,6 +36,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'supervisor'] },
   { label: 'Zonas', href: '/dashboard/zones', icon: MapPin },
   { label: 'ATMs', href: '/dashboard/atms', icon: Banknote },
+  { label: 'Atribuições', href: '/dashboard/assignments', icon: ArrowLeftRight, roles: ['admin', 'supervisor'] },
   { label: 'Subscrições', href: '/dashboard/subscriptions', icon: ClipboardCheck, roles: ['admin', 'supervisor'] },
   { label: 'Levantamentos', href: '/dashboard/withdrawals', icon: Wallet, roles: ['admin', 'supervisor'] },
   { label: 'Agentes', href: '/dashboard/agents', icon: Users, roles: ['admin', 'supervisor'] },
