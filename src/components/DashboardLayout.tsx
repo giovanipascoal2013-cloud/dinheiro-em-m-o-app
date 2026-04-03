@@ -10,7 +10,8 @@ import {
   Shield,
   UserCog,
   ClipboardCheck,
-  Wallet
+  Wallet,
+  ArrowLeftRight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
