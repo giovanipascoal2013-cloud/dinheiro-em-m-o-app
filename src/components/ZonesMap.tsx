@@ -24,6 +24,7 @@ interface ZonesMapProps {
   subscribedZoneIds?: Set<string>;
   onZoneSelect?: (zoneId: string) => void;
   className?: string;
+  pricePerAtm?: number;
 }
 
 interface ATMMarkerData {
