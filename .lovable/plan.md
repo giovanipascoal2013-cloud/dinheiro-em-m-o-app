@@ -1,44 +1,97 @@
-## Plano: Rodapé profissional com contactos, redes sociais e links legais
 
-### O que será feito
 
-Criar um componente `Footer` reutilizável com 4 secções e aplicá-lo nas páginas públicas.
+## Plano: Role "Financeiro" com Dashboard Corporativo (Actualizado)
 
-### Conteúdo do rodapé
+### Resumo
+Adicionar o role `financeiro` ao sistema com dashboard financeiro profissional, incluindo controlo total sobre preços de zonas e o preço base por ATM.
 
-**Coluna 1 — Sobre**
+---
 
-- Logo + nome "Dinheiro em Mão"
-- Texto: "Ajudando você a encontrar caixas eletrônicos operacionais com dinheiro disponível, economizando tempo e frustração."
+### 1. Migração de Base de Dados
 
-**Coluna 2 — Contacte-nos**
+```sql
+-- Novo valor no enum
+ALTER TYPE public.app_role ADD VALUE 'financeiro';
 
-- Email: [docflex.angola@gmail.com](mailto:docflex.angola@gmail.com) (link `mailto:`)
-- Telefone: +244 933 986 318 (link `tel:`)
+-- Tabela de configuração de preços da plataforma
+CREATE TABLE public.platform_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  updated_by UUID REFERENCES auth.users(id)
+);
+INSERT INTO platform_settings (key, value) VALUES ('price_per_atm', '500');
 
-**Coluna 3 — Links**
+-- RLS: financeiro e admin podem ler e actualizar settings
+-- RLS: financeiro pode SELECT em subscriptions, withdrawals, zones
+-- RLS: financeiro pode UPDATE em withdrawals (processar levantamentos)
+-- RLS: financeiro pode UPDATE price_kz em zones
+```
 
-- Sobre Nós (âncora ou página futura)
-- Políticas e Condições de Uso (âncora ou página futura)
+### 2. Hook `useAuth` — Adicionar `isFinanceiro`
 
-**Coluna 4 — Redes Sociais** (ícones com links)
+Novo campo booleano exposto no contexto, redireccionamento pós-login para `/finance`.
 
-- Facebook: [https://www.facebook.com/share/16vq3AX1ga/?mibextid=wwXIfr](https://www.facebook.com/share/16vq3AX1ga/?mibextid=wwXIfr)
-- WhatsApp: [https://wa.me/244933986318](https://wa.me/244933986318)
-- Instagram: [https://www.instagram.com/dinheiroemmao2?igsh=cWZreWJnMzQ2bGN6](https://www.instagram.com/dinheiroemmao2?igsh=cWZreWJnMzQ2bGN6)
+### 3. Dashboard Financeiro (`/finance`)
 
-**Barra inferior:** © 2025 Dinheiro em Mão. Feito em Angola 🇦🇴
+Página nova: `src/pages/FinanceDashboard.tsx`
 
-### Ficheiros a criar/modificar
+**KPIs (4-5 cards):** Receita Total, Receita Mensal, Pago a Agentes, Pendente, Margem (30%)
 
-1. `**src/components/Footer.tsx**` — novo componente reutilizável
-  - Layout responsivo: 4 colunas em desktop, empilhado em mobile
-  - Ícones Lucide: `Mail`, `Phone`, `Facebook`, `Instagram` + ícone SVG inline para WhatsApp (Lucide não tem WhatsApp)
-  - Links externos com `target="_blank"` e `rel="noopener noreferrer"`
-2. **Páginas que receberão o Footer:**
-  - `src/pages/Index.tsx` — substituir o footer inline actual
-  - `src/pages/ZoneDetail.tsx` — adicionar no final
-  - `src/pages/MyZones.tsx` — adicionar no final
-  - `src/pages/Auth.tsx` — adicionar no final
+**Gráfico:** Barras mensais (Receita vs Pagamentos) com linha de margem — Recharts
 
-As páginas do dashboard (admin/agente) não recebem este footer pois já têm o `DashboardLayout`.
+**Tabela por Zona:** Zona, Subscrições Activas, Receita, Pagamentos, Margem — ordenável
+
+**Levantamentos Recentes:** Últimos 10 com status, link para `/dashboard/withdrawals`
+
+### 4. Gestão de Preços (NOVO)
+
+Secção dedicada no dashboard financeiro com duas funcionalidades:
+
+**A — Preço Base por ATM (global):**
+- Card editável mostrando o valor actual da `platform_settings.price_per_atm`
+- Input com botão "Guardar" para alterar o preço base (ex: 500 KZ → 750 KZ)
+- Afecta todas as zonas com `price_kz = 0` (modo auto-cálculo)
+
+**B — Preços por Zona (individual):**
+- Tabela de todas as zonas com coluna editável de `price_kz`
+- Inline editing: clicar no preço, alterar, confirmar
+- Opção de repor para "Auto" (definir `price_kz = 0`)
+- Badge visual distinguindo zonas com preço manual vs automático
+
+**Lógica de preço efectivo actualizada:**
+- Se `zone.price_kz > 0` → usar preço manual
+- Se `zone.price_kz = 0` → `platform_settings.price_per_atm × nº ATMs`
+- Código existente em `ZoneDetail`, `ZoneCard`, `Index.tsx` adaptado para ler `platform_settings`
+
+### 5. Sidebar e Routing
+
+**DashboardLayout** — novos itens para financeiro:
+- Painel Financeiro → `/finance`
+- Levantamentos → `/dashboard/withdrawals`
+- Subscrições → `/dashboard/subscriptions`
+
+**App.tsx** — nova rota protegida:
+```
+/finance → ProtectedRoute requiredRoles=['financeiro','admin']
+```
+
+### 6. Página de Roles
+
+Actualizar `/dashboard/roles` para incluir card de estatística e atribuição do role `financeiro`.
+
+---
+
+### Ficheiros
+
+| Ficheiro | Acção |
+|---|---|
+| Migração SQL | Criar — enum + `platform_settings` + RLS |
+| `src/hooks/useAuth.tsx` | Modificar — `isFinanceiro` |
+| `src/components/DashboardLayout.tsx` | Modificar — nav financeiro |
+| `src/pages/FinanceDashboard.tsx` | **Criar** — dashboard + gestão de preços |
+| `src/pages/dashboard/Roles.tsx` | Modificar — incluir financeiro |
+| `src/App.tsx` | Modificar — rota `/finance` |
+| `src/pages/ZoneDetail.tsx` | Modificar — ler `price_per_atm` de settings |
+| `src/pages/Index.tsx` | Modificar — preço efectivo com settings |
+
