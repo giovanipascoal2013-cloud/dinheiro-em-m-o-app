@@ -40,7 +40,7 @@ const Index = () => {
   const [subscribedZoneIds, setSubscribedZoneIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [pricePerAtm, setPricePerAtm] = useState(500);
+  const pricePerAtm = usePricePerAtm();
 
   useEffect(() => {
     fetchZones();
