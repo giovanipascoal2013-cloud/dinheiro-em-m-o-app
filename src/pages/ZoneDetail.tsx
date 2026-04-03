@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+import { Footer } from '@/components/Footer';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 

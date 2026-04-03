@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logoIcon from '@/assets/logo-icon.png';
+import { Footer } from '@/components/Footer';
 
 type AuthMode = 'login' | 'register';
 type LoginMethod = 'phone' | 'email';

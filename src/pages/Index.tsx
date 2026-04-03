@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import logoIcon from '@/assets/logo-icon.png';
+import { Footer } from '@/components/Footer';
 
 const sortOptions = [
   { value: 'proximity', label: 'Mais perto' },
