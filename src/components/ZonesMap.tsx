@@ -78,7 +78,7 @@ const GeolocateOnMount: React.FC = () => {
   return null;
 };
 
-export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = new Set(), onZoneSelect, className = '' }) => {
+export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = new Set(), onZoneSelect, className = '', pricePerAtm = 500 }) => {
   const [selectedZone, setSelectedZone] = useState<ZoneCardData | null>(null);
   const [atms, setAtms] = useState<ATMMarkerData[]>([]);
 
