@@ -99,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = roles.includes('admin');
   const isSupervisor = roles.includes('supervisor') || isAdmin;
   const isAgent = roles.includes('agent') || isSupervisor;
+  const isFinanceiro = roles.includes('financeiro') || isAdmin;
 
   return (
     <AuthContext.Provider
