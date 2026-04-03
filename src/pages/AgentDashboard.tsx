@@ -178,7 +178,20 @@ const AgentDashboard = () => {
               return (
                 <div key={zone.id} className="bg-card rounded-xl p-4 shadow-card border border-border/50">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-foreground text-sm">{zone.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground text-sm">{zone.name}</h3>
+                      {(() => {
+                        const ref = agentZoneRefs.find(r => r.zone_id === zone.id);
+                        return ref ? (
+                          <ReferralShare
+                            zoneName={zone.name}
+                            zoneId={zone.id}
+                            referralCode={ref.referral_code}
+                            agentName={profile?.nome || 'Agente'}
+                          />
+                        ) : null;
+                      })()}
+                    </div>
                     <span className="text-xs text-muted-foreground">{zoneAgg?.total ?? 0} adesões</span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {zone.price_kz.toLocaleString()} KZ/mês</p>
