@@ -29,7 +29,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles?: ('admin' | 'supervisor' | 'agent')[];
+  roles?: ('admin' | 'supervisor' | 'agent' | 'financeiro')[];
 }
 
 const navItems: NavItem[] = [
