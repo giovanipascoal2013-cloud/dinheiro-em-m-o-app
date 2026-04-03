@@ -312,7 +312,7 @@ export default function RolesPage() {
             <div className="space-y-2">
               <Label>Cargo</Label>
               <div className="grid grid-cols-3 gap-2">
-                {(['agent', 'supervisor', 'admin'] as const).map(role => {
+                {(['agent', 'supervisor', 'admin', 'financeiro'] as const).map(role => {
                   const config = ROLE_CONFIG[role];
                   const Icon = config.icon;
                   return (
