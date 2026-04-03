@@ -52,7 +52,8 @@ const AgentDashboard = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: agentZones } = await supabase.from('agent_zones').select('zone_id').eq('agent_id', user.id);
+      const { data: agentZones } = await supabase.from('agent_zones').select('zone_id, referral_code').eq('agent_id', user.id);
+      setAgentZoneRefs((agentZones as AgentZoneRef[]) ?? []);
       const zoneIds = agentZones?.map(az => az.zone_id) ?? [];
 
       if (zoneIds.length === 0) {
