@@ -362,11 +362,7 @@ const Auth = () => {
         </div>
       </main>
 
-      <footer className="py-4 text-center">
-        <p className="text-xs text-muted-foreground">
-          Ao continuar, aceita os termos de serviço e política de privacidade
-        </p>
-      </footer>
+      <Footer />
     </div>
   );
 };
