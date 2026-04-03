@@ -40,11 +40,6 @@ const ZoneDetail = () => {
   useEffect(() => { if (id) { fetchZone(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
 
-  const fetchPricePerAtm = async () => {
-    const { data } = await supabase.from('platform_settings').select('value').eq('key', 'price_per_atm').single();
-    if (data) setPricePerAtm(Number(data.value) || 500);
-  };
-
   const fetchZone = async () => {
     const [zoneRes, atmsRes] = await Promise.all([
       supabase.from('zones').select('*').eq('id', id!).single(),

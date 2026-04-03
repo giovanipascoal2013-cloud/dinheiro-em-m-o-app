@@ -54,11 +54,6 @@ const Index = () => {
     if (user) fetchSubscriptions();
   }, [user]);
 
-  const fetchPricePerAtm = async () => {
-    const { data } = await supabase.from('platform_settings').select('value').eq('key', 'price_per_atm').single();
-    if (data) setPricePerAtm(Number(data.value) || 500);
-  };
-
   const fetchZones = async () => {
     const [zonesRes, atmsRes] = await Promise.all([
       supabase.from('zones').select('*').eq('status', 'active'),
