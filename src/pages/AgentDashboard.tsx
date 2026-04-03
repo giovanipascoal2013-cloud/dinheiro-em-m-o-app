@@ -3,6 +3,8 @@ import {
   MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { DashboardHint } from '@/components/DashboardHint';
+import { ReferralShare } from '@/components/ReferralShare';
 import { Switch } from '@/components/ui/switch';
 import { WithdrawalModal } from '@/components/WithdrawalModal';
 import { useAuth } from '@/hooks/useAuth';
