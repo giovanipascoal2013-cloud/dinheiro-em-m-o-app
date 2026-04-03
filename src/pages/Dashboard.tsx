@@ -94,6 +94,7 @@ export default function Dashboard() {
       title={`Olá, ${profile?.nome?.split(' ')[0] || 'Utilizador'}!`}
       subtitle={`Painel de ${roleLabel}`}
     >
+      <DashboardHint role={isAdmin ? 'admin' : 'supervisor'} />
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
