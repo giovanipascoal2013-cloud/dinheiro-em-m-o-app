@@ -49,7 +49,7 @@ const navItems: NavItem[] = [
 export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, isAdmin, isSupervisor, isAgent, signOut } = useAuth();
+  const { profile, isAdmin, isSupervisor, isAgent, isFinanceiro, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
