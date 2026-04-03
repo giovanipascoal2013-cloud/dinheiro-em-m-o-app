@@ -69,7 +69,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/subscriptions" element={
-              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'financeiro']}>
                 <SubscriptionsPage />
               </ProtectedRoute>
             } />
