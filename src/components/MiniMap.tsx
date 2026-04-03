@@ -1,3 +1,4 @@
+// react-leaflet v4.2.1 (React 18 compatible)
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
