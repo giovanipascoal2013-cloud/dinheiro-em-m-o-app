@@ -117,7 +117,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
 
         {/* User section */}
         <div className="p-4 border-t border-border">
-          <div className="flex items-center gap-3 mb-3">
+          <Link to="/profile" className="flex items-center gap-3 mb-3 hover:bg-muted/50 rounded-lg p-1 -m-1 transition-colors">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <span className="text-primary font-semibold">
                 {profile?.nome?.charAt(0) || 'U'}
@@ -129,7 +129,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
               </p>
               <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </div>
-          </div>
+          </Link>
           <Button 
             variant="ghost" 
             className="w-full justify-start text-muted-foreground hover:text-destructive"

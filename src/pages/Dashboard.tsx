@@ -256,13 +256,22 @@ function RecentZonesList() {
 
   useEffect(() => {
     const fetchZones = async () => {
-      const { data } = await supabase
-        .from('zones')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(5);
-      
-      setZones(data || []);
+      const [zonesRes, atmsRes] = await Promise.all([
+        supabase.from('zones').select('*').order('created_at', { ascending: false }).limit(5),
+        supabase.from('atms').select('zone_id'),
+      ]);
+
+      const atmCounts = new Map<string, number>();
+      (atmsRes.data || []).forEach(a => {
+        if (a.zone_id) atmCounts.set(a.zone_id, (atmCounts.get(a.zone_id) || 0) + 1);
+      });
+
+      const enriched = (zonesRes.data || []).map(z => ({
+        ...z,
+        atm_count: atmCounts.get(z.id) || 0,
+      }));
+
+      setZones(enriched);
       setIsLoading(false);
     };
 
@@ -290,23 +299,28 @@ function RecentZonesList() {
 
   return (
     <div className="space-y-3">
-      {zones.map(zone => (
-        <div 
-          key={zone.id}
-          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-        >
-          <div>
-            <p className="font-medium text-foreground">{zone.name}</p>
-            <p className="text-sm text-muted-foreground">{zone.price_kz.toLocaleString()} KZ</p>
+      {zones.map(zone => {
+        const effectivePrice = zone.price_kz > 0 ? zone.price_kz : zone.atm_count * 500;
+        return (
+          <div 
+            key={zone.id}
+            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+          >
+            <div>
+              <p className="font-medium text-foreground">{zone.name}</p>
+              <p className="text-sm text-muted-foreground">
+                {effectivePrice > 0 ? `${effectivePrice.toLocaleString()} KZ` : 'A calcular'}
+              </p>
+            </div>
+            <div className={cn(
+              "px-2 py-1 rounded-full text-xs font-medium",
+              zone.status === 'active' ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+            )}>
+              {zone.status === 'active' ? 'Activa' : 'Suspensa'}
+            </div>
           </div>
-          <div className={cn(
-            "px-2 py-1 rounded-full text-xs font-medium",
-            zone.status === 'active' ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
-          )}>
-            {zone.status === 'active' ? 'Activa' : 'Suspensa'}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

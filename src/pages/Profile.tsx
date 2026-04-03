@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, User, MapPin, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, User, MapPin, Phone } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -15,7 +15,7 @@ const PROVINCIAS_ANGOLA = [
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const [nome, setNome] = useState('');
   const [provincia, setProvincia] = useState('');
   const [cidade, setCidade] = useState('');
@@ -25,21 +25,16 @@ const Profile = () => {
 
   useEffect(() => {
     if (!user) { navigate('/auth'); return; }
-    if (profile) {
-      setNome(profile.nome || '');
-      setTelefone(profile.telefone || '');
-      // Fetch full profile with new fields
-      supabase.from('profiles').select('*').eq('user_id', user.id).single().then(({ data }) => {
-        if (data) {
-          setProvincia((data as any).provincia || '');
-          setCidade((data as any).cidade || '');
-        }
-        setLoaded(true);
-      });
-    } else {
+    supabase.from('profiles').select('*').eq('user_id', user.id).single().then(({ data }) => {
+      if (data) {
+        setNome(data.nome || '');
+        setTelefone(data.telefone || '');
+        setProvincia(data.provincia || '');
+        setCidade(data.cidade || '');
+      }
       setLoaded(true);
-    }
-  }, [user, profile]);
+    });
+  }, [user]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -48,7 +43,7 @@ const Profile = () => {
       nome: nome.trim() || null,
       provincia: provincia || null,
       cidade: cidade.trim() || null,
-    } as any).eq('user_id', user.id);
+    }).eq('user_id', user.id);
 
     if (error) {
       toast({ title: 'Erro ao guardar', description: error.message, variant: 'destructive' });
@@ -91,7 +86,6 @@ const Profile = () => {
           </div>
 
           <div className="space-y-4">
-            {/* Nome */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Nome</label>
               <div className="relative">
@@ -100,7 +94,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Telefone (read-only) */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Telefone</label>
               <div className="relative">
@@ -110,7 +103,6 @@ const Profile = () => {
               <p className="text-xs text-muted-foreground mt-1">Contacte o suporte para alterar o telefone</p>
             </div>
 
-            {/* Província + Cidade */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">Província</label>

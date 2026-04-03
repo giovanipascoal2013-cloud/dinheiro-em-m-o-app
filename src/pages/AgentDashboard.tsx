@@ -76,16 +76,15 @@ const AgentDashboard = () => {
       setTotalWithdrawn(withdrawn);
 
       const subs = subsRes.data ?? [];
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const now = new Date();
 
       const aggMap = new Map<string, SubscriptionAgg>();
       for (const sub of subs) {
         const existing = aggMap.get(sub.zone_id) || { zone_id: sub.zone_id, total: 0, expired_amount: 0, active_amount: 0 };
         existing.total += 1;
         const amount = Number(sub.amount_kz);
-        const createdAt = new Date(sub.created_at);
-        if (createdAt < oneMonthAgo) {
+        const expiryDate = new Date(sub.expiry_date);
+        if (sub.status === 'expired' || expiryDate < now) {
           existing.expired_amount += amount;
         } else {
           existing.active_amount += amount;
@@ -194,7 +193,7 @@ const AgentDashboard = () => {
                     </div>
                     <span className="text-xs text-muted-foreground">{zoneAgg?.total ?? 0} adesões</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {zone.price_kz.toLocaleString()} KZ/mês</p>
+                  <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {(zone.price_kz > 0 ? zone.price_kz : zoneAtms.length * 500).toLocaleString()} KZ/mês</p>
                   <div className="space-y-3">
                     {zoneAtms.map(atm => (
                       <ATMCard 
