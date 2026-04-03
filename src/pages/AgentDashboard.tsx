@@ -136,6 +136,7 @@ const AgentDashboard = () => {
 
   return (
     <DashboardLayout title="Meu Painel" subtitle="Painel do Agente">
+      <DashboardHint role="agent" />
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard icon={MapPin} label="Zonas" value={zones.length} color="primary" />
