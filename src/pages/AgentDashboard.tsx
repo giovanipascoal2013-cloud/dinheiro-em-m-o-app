@@ -29,6 +29,7 @@ interface ATM {
   obs: string | null; last_updated: string; zone_id: string; 
 }
 interface SubscriptionAgg { zone_id: string; total: number; expired_amount: number; active_amount: number; }
+interface AgentZoneRef { zone_id: string; referral_code: string; }
 
 const AGENT_SHARE = 0.7;
 
