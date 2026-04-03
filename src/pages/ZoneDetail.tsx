@@ -37,7 +37,7 @@ const ZoneDetail = () => {
   const [loading, setLoading] = useState(true);
   const pricePerAtm = usePricePerAtm();
 
-  useEffect(() => { if (id) { fetchZone(); fetchPricePerAtm(); } }, [id]);
+  useEffect(() => { if (id) { fetchZone(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
 
   const fetchPricePerAtm = async () => {
