@@ -125,6 +125,7 @@ export default function RolesPage() {
     admin: roles.filter(r => r.role === 'admin').length,
     supervisor: roles.filter(r => r.role === 'supervisor').length,
     agent: roles.filter(r => r.role === 'agent').length,
+    financeiro: roles.filter(r => r.role === 'financeiro').length,
   }), [roles]);
 
   // Users who don't already have the selected role
