@@ -235,7 +235,7 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-foreground">Mapa de Zonas</h2>
               <span className="text-sm text-muted-foreground">{filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''}</span>
             </div>
-            <ZonesMap zones={filteredZones} subscribedZoneIds={subscribedZoneIds} onZoneSelect={handleZoneClick} className="h-[500px] md:h-[600px]" />
+            <ZonesMap zones={filteredZones} subscribedZoneIds={subscribedZoneIds} onZoneSelect={handleZoneClick} className="h-[500px] md:h-[600px]" pricePerAtm={pricePerAtm} />
           </div>
         ) : (
           <>
