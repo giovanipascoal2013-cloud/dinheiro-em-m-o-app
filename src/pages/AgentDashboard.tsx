@@ -44,6 +44,7 @@ const AgentDashboard = () => {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [editingObs, setEditingObs] = useState<string | null>(null);
   const [obsText, setObsText] = useState('');
+  const [agentZoneRefs, setAgentZoneRefs] = useState<AgentZoneRef[]>([]);
 
   useEffect(() => { if (user) fetchData(); }, [user]);
 
