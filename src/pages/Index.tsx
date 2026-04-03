@@ -259,6 +259,7 @@ const Index = () => {
                       zone={zone}
                       isSubscribed={subscribedZoneIds.has(zone.id)}
                       onClick={() => handleZoneClick(zone.id)}
+                      pricePerAtm={pricePerAtm}
                     />
                   </div>
                 ))}
