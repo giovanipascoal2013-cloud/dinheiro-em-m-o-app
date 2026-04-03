@@ -76,16 +76,15 @@ const AgentDashboard = () => {
       setTotalWithdrawn(withdrawn);
 
       const subs = subsRes.data ?? [];
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      const now = new Date();
 
       const aggMap = new Map<string, SubscriptionAgg>();
       for (const sub of subs) {
         const existing = aggMap.get(sub.zone_id) || { zone_id: sub.zone_id, total: 0, expired_amount: 0, active_amount: 0 };
         existing.total += 1;
         const amount = Number(sub.amount_kz);
-        const createdAt = new Date(sub.created_at);
-        if (createdAt < oneMonthAgo) {
+        const expiryDate = new Date(sub.expiry_date);
+        if (sub.status === 'expired' || expiryDate < now) {
           existing.expired_amount += amount;
         } else {
           existing.active_amount += amount;
