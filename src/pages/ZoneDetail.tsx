@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, FileText, AlertTriangle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { PaymentModal } from '@/components/PaymentModal';
