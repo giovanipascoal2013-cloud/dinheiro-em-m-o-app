@@ -76,6 +76,7 @@ export const MiniMap: React.FC<MiniMapProps> = ({ latitude, longitude, onPositio
         attributionControl={false}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <InvalidateSize />
         <Marker
           position={[latitude, longitude]}
           draggable
