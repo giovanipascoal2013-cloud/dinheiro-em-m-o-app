@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, MapPin, SlidersHorizontal, X, Map, LayoutGrid } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
+import { DashboardHint } from '@/components/DashboardHint';
 import { ZoneCard, ZoneCardData } from '@/components/ZoneCard';
 import { ZonesMap } from '@/components/ZonesMap';
 import { Button } from '@/components/ui/button';
