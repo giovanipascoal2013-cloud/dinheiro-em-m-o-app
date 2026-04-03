@@ -214,6 +214,7 @@ const Index = () => {
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-8">
+        {user && <DashboardHint role="user" />}
         {loading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map(i => (
