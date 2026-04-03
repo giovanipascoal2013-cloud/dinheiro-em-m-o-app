@@ -21,6 +21,8 @@ import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AssignmentsPage from "./pages/dashboard/Assignments";
 import AgentDashboard from "./pages/AgentDashboard";
 import Profile from "./pages/Profile";
+import About from "./pages/About";
+import Terms from "./pages/Terms";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -36,6 +38,8 @@ const App = () => (
             <Route path="/my-zones" element={<MyZones />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/terms" element={<Terms />} />
             
             {/* Dashboard routes */}
             <Route path="/dashboard" element={
