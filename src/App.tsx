@@ -20,6 +20,7 @@ import SubscriptionsPage from "./pages/dashboard/Subscriptions";
 import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AssignmentsPage from "./pages/dashboard/Assignments";
 import AgentDashboard from "./pages/AgentDashboard";
+import FinanceDashboard from "./pages/FinanceDashboard";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Terms from "./pages/Terms";
@@ -68,12 +69,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/subscriptions" element={
-              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'financeiro']}>
                 <SubscriptionsPage />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/withdrawals" element={
-              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'financeiro']}>
                 <WithdrawalsPage />
               </ProtectedRoute>
             } />
@@ -90,6 +91,11 @@ const App = () => (
             <Route path="/agent" element={
               <ProtectedRoute requiredRoles={['agent', 'admin', 'supervisor']}>
                 <AgentDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/finance" element={
+              <ProtectedRoute requiredRoles={['financeiro', 'admin']}>
+                <FinanceDashboard />
               </ProtectedRoute>
             } />
             

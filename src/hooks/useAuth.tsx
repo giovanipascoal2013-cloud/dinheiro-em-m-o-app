@@ -22,6 +22,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isSupervisor: boolean;
   isAgent: boolean;
+  isFinanceiro: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -99,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAdmin = roles.includes('admin');
   const isSupervisor = roles.includes('supervisor') || isAdmin;
   const isAgent = roles.includes('agent') || isSupervisor;
+  const isFinanceiro = roles.includes('financeiro') || isAdmin;
 
   return (
     <AuthContext.Provider
@@ -111,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin,
         isSupervisor,
         isAgent,
+        isFinanceiro,
         signOut,
       }}
     >

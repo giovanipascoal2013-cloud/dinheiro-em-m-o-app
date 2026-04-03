@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Search, Shield, ShieldCheck, ShieldAlert, Plus, Trash2, Users, UserCog, Crown, Loader2 } from 'lucide-react';
+import { Search, Shield, ShieldCheck, ShieldAlert, Plus, Trash2, Users, UserCog, Crown, Loader2, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -56,9 +56,16 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Shield; colorCla
     bgClass: 'bg-primary/10 border-primary/20',
     description: 'Gestão de ATMs atribuídos',
   },
+  financeiro: {
+    label: 'Financeiro',
+    icon: TrendingUp,
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    bgClass: 'bg-emerald-500/10 border-emerald-500/20',
+    description: 'Análise financeira e controlo de preços',
+  },
 };
 
-type FilterRole = 'all' | 'admin' | 'supervisor' | 'agent';
+type FilterRole = 'all' | 'admin' | 'supervisor' | 'agent' | 'financeiro';
 
 export default function RolesPage() {
   const [roles, setRoles] = useState<any[]>([]);
@@ -118,6 +125,7 @@ export default function RolesPage() {
     admin: roles.filter(r => r.role === 'admin').length,
     supervisor: roles.filter(r => r.role === 'supervisor').length,
     agent: roles.filter(r => r.role === 'agent').length,
+    financeiro: roles.filter(r => r.role === 'financeiro').length,
   }), [roles]);
 
   // Users who don't already have the selected role
@@ -189,6 +197,7 @@ export default function RolesPage() {
         <StatCard label="Administradores" value={stats.admin} icon={Crown} active={filterRole === 'admin'} onClick={() => setFilterRole('admin')} />
         <StatCard label="Supervisores" value={stats.supervisor} icon={ShieldCheck} active={filterRole === 'supervisor'} onClick={() => setFilterRole('supervisor')} />
         <StatCard label="Agentes" value={stats.agent} icon={ShieldAlert} active={filterRole === 'agent'} onClick={() => setFilterRole('agent')} />
+        <StatCard label="Financeiros" value={stats.financeiro} icon={TrendingUp} active={filterRole === 'financeiro'} onClick={() => setFilterRole('financeiro')} />
       </div>
 
       {/* Toolbar */}
@@ -303,7 +312,7 @@ export default function RolesPage() {
             <div className="space-y-2">
               <Label>Cargo</Label>
               <div className="grid grid-cols-3 gap-2">
-                {(['agent', 'supervisor', 'admin'] as const).map(role => {
+                {(['agent', 'supervisor', 'admin', 'financeiro'] as const).map(role => {
                   const config = ROLE_CONFIG[role];
                   const Icon = config.icon;
                   return (

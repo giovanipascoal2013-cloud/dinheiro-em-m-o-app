@@ -11,7 +11,8 @@ import {
   UserCog,
   ClipboardCheck,
   Wallet,
-  ArrowLeftRight
+  ArrowLeftRight,
+  TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,17 +29,18 @@ interface NavItem {
   label: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
-  roles?: ('admin' | 'supervisor' | 'agent')[];
+  roles?: ('admin' | 'supervisor' | 'agent' | 'financeiro')[];
 }
 
 const navItems: NavItem[] = [
   { label: 'Meu Painel', href: '/agent', icon: LayoutDashboard, roles: ['agent'] },
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, roles: ['admin', 'supervisor'] },
+  { label: 'Painel Financeiro', href: '/finance', icon: TrendingUp, roles: ['financeiro'] },
   { label: 'Zonas', href: '/dashboard/zones', icon: MapPin },
   { label: 'ATMs', href: '/dashboard/atms', icon: Banknote },
   { label: 'Atribuições', href: '/dashboard/assignments', icon: ArrowLeftRight, roles: ['admin', 'supervisor'] },
-  { label: 'Subscrições', href: '/dashboard/subscriptions', icon: ClipboardCheck, roles: ['admin', 'supervisor'] },
-  { label: 'Levantamentos', href: '/dashboard/withdrawals', icon: Wallet, roles: ['admin', 'supervisor'] },
+  { label: 'Subscrições', href: '/dashboard/subscriptions', icon: ClipboardCheck, roles: ['admin', 'supervisor', 'financeiro'] },
+  { label: 'Levantamentos', href: '/dashboard/withdrawals', icon: Wallet, roles: ['admin', 'supervisor', 'financeiro'] },
   { label: 'Agentes', href: '/dashboard/agents', icon: Users, roles: ['admin', 'supervisor'] },
   { label: 'Utilizadores', href: '/dashboard/users', icon: UserCog, roles: ['admin'] },
   { label: 'Roles', href: '/dashboard/roles', icon: Shield, roles: ['admin'] },
@@ -47,7 +49,7 @@ const navItems: NavItem[] = [
 export function DashboardLayout({ children, title, subtitle }: DashboardLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, isAdmin, isSupervisor, isAgent, signOut } = useAuth();
+  const { profile, isAdmin, isSupervisor, isAgent, isFinanceiro, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
@@ -60,14 +62,17 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
     // If user is admin/supervisor, exclude agent-only items
     if ((isAdmin || isSupervisor) && item.roles.length === 1 && item.roles[0] === 'agent') return false;
     // If user is only agent, exclude admin/supervisor-only items
-    if (!isAdmin && !isSupervisor && isAgent && !item.roles.includes('agent')) return false;
+    if (!isAdmin && !isSupervisor && !isFinanceiro && isAgent && !item.roles.includes('agent')) return false;
+    // Financeiro-only: exclude items that don't include financeiro
+    if (!isAdmin && !isSupervisor && !isAgent && isFinanceiro && !item.roles.includes('financeiro')) return false;
     if (isAdmin && item.roles.includes('admin')) return true;
     if (isSupervisor && item.roles.includes('supervisor')) return true;
     if (isAgent && item.roles.includes('agent')) return true;
+    if (isFinanceiro && item.roles.includes('financeiro')) return true;
     return false;
   });
 
-  const roleLabel = isAdmin ? 'Administrador' : isSupervisor ? 'Supervisor' : 'Agente';
+  const roleLabel = isAdmin ? 'Administrador' : isSupervisor ? 'Supervisor' : isFinanceiro ? 'Financeiro' : 'Agente';
 
   return (
     <div className="min-h-screen bg-background flex">

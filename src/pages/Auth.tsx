@@ -40,6 +40,8 @@ const Auth = () => {
     const userRoles = rolesData?.map(r => r.role) ?? [];
     if (userRoles.includes('admin') || userRoles.includes('supervisor')) {
       navigate('/dashboard');
+    } else if (userRoles.includes('financeiro')) {
+      navigate('/finance');
     } else if (userRoles.includes('agent')) {
       navigate('/agent');
     } else {
