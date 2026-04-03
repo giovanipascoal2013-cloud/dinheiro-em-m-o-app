@@ -3,11 +3,10 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ZoneCardData } from '@/components/ZoneCard';
-import { MapPin, X } from 'lucide-react';
+import { MapPin, X, MessageCircle, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
-// Fix default icon
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -94,11 +93,20 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
     green: createATMIcon('#22c55e'),
     red: createATMIcon('#ef4444'),
     gray: createATMIcon('#6b7280'),
+    neutral: createATMIcon('#3b82f6'),
   }), []);
+
+  const getStatusIcon = (atm: ATMMarkerData) => {
+    if (atm.status === 'Fora de Serviço') return atmIcons.gray;
+    if (!atm.has_cash) return atmIcons.red;
+    return atmIcons.green;
+  };
 
   const handleViewZone = () => {
     if (selectedZone && onZoneSelect) onZoneSelect(selectedZone.id);
   };
+
+  const hasSubscriptions = subscribedZoneIds.size > 0;
 
   return (
     <div className={`relative rounded-2xl overflow-hidden ${className}`}>
@@ -112,27 +120,18 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
         <InvalidateSize />
         <GeolocateOnMount />
 
-        {/* Zone markers */}
         {zones.map((zone) => (
           <Marker
             key={zone.id}
             position={[zone.latitude, zone.longitude]}
             icon={createZoneIcon(zone.atm_count ?? 0)}
-            eventHandlers={{
-              click: () => {
-                setSelectedZone(zone);
-              },
-            }}
+            eventHandlers={{ click: () => setSelectedZone(zone) }}
           />
         ))}
 
-        {/* ATM markers */}
         {atms.map((atm) => {
-          let icon = atmIcons.green;
-          if (atm.status === 'Fora de Serviço') icon = atmIcons.gray;
-          else if (!atm.has_cash) icon = atmIcons.red;
-
           const isSubscribed = atm.zone_id ? subscribedZoneIds.has(atm.zone_id) : false;
+          const icon = isSubscribed ? getStatusIcon(atm) : atmIcons.neutral;
 
           return (
             <Marker
@@ -148,7 +147,8 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
                 },
               }}
             >
-              {(isSubscribed || !atm.zone_id) && (
+              {/* Caso A: Subscrito — informação completa */}
+              {isSubscribed && (
                 <Popup>
                   <div style={{ minWidth: 180 }}>
                     <strong>{atm.bank_name}</strong>
@@ -163,6 +163,33 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
                   </div>
                 </Popup>
               )}
+
+              {/* Caso C: ATM sem zona — pedir suporte */}
+              {!atm.zone_id && (
+                <Popup>
+                  <div style={{ minWidth: 180, textAlign: 'center' }}>
+                    <p style={{ fontWeight: 600, marginBottom: 4 }}>{atm.bank_name}</p>
+                    <p style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>{atm.address}</p>
+                    <div style={{ background: '#fef3c7', borderRadius: 8, padding: '8px 10px', marginBottom: 8 }}>
+                      <p style={{ fontSize: 11, color: '#92400e', margin: 0 }}>
+                        Este ATM ainda não está coberto por nenhuma zona.
+                      </p>
+                    </div>
+                    <a
+                      href={`https://wa.me/244933986318?text=${encodeURIComponent(`Olá, gostaria de solicitar a activação do ATM: ${atm.bank_name} (${atm.address}). ID: ${atm.id}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        background: '#25d366', color: 'white', padding: '6px 12px',
+                        borderRadius: 6, fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                      }}
+                    >
+                      💬 Contactar Suporte
+                    </a>
+                  </div>
+                </Popup>
+              )}
             </Marker>
           );
         })}
@@ -170,20 +197,33 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
 
       <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
 
-      {/* Legend */}
+      {/* Legenda condicional */}
       <div className="absolute top-3 right-3 bg-card/90 backdrop-blur-sm rounded-lg border border-border/50 px-3 py-2 text-xs z-[1000]">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-success inline-block" />
-          <span className="text-foreground">Com dinheiro</span>
-        </div>
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-3 h-3 rounded-full bg-destructive inline-block" />
-          <span className="text-foreground">Sem dinheiro</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-muted-foreground inline-block" />
-          <span className="text-foreground">Fora de serviço</span>
-        </div>
+        {hasSubscriptions ? (
+          <>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-3 h-3 rounded-full bg-success inline-block" />
+              <span className="text-foreground">Com dinheiro</span>
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-3 h-3 rounded-full bg-destructive inline-block" />
+              <span className="text-foreground">Sem dinheiro</span>
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-3 h-3 rounded-full bg-muted-foreground inline-block" />
+              <span className="text-foreground">Fora de serviço</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-full bg-primary inline-block" />
+              <span className="text-foreground">Não subscrito</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Lock className="h-3 w-3 text-muted-foreground" />
+            <span className="text-muted-foreground">Subscreva uma zona para ver o estado dos ATMs</span>
+          </div>
+        )}
       </div>
 
       {selectedZone && (
