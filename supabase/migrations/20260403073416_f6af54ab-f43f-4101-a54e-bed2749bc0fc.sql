@@ -1,0 +1,1 @@
+ALTER TABLE public.agent_zones ADD CONSTRAINT unique_zone_assignment UNIQUE(zone_id);
