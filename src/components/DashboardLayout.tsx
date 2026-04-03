@@ -62,10 +62,13 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
     // If user is admin/supervisor, exclude agent-only items
     if ((isAdmin || isSupervisor) && item.roles.length === 1 && item.roles[0] === 'agent') return false;
     // If user is only agent, exclude admin/supervisor-only items
-    if (!isAdmin && !isSupervisor && isAgent && !item.roles.includes('agent')) return false;
+    if (!isAdmin && !isSupervisor && !isFinanceiro && isAgent && !item.roles.includes('agent')) return false;
+    // Financeiro-only: exclude items that don't include financeiro
+    if (!isAdmin && !isSupervisor && !isAgent && isFinanceiro && !item.roles.includes('financeiro')) return false;
     if (isAdmin && item.roles.includes('admin')) return true;
     if (isSupervisor && item.roles.includes('supervisor')) return true;
     if (isAgent && item.roles.includes('agent')) return true;
+    if (isFinanceiro && item.roles.includes('financeiro')) return true;
     return false;
   });
 
