@@ -3,6 +3,11 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 export default function Terms() {
+  useEffect(() => {
+    document.title = 'Políticas e Condições de Uso — Dinheiro em Mão';
+    document.querySelector('meta[name="description"]')?.setAttribute('content', 'Termos de serviço, política de privacidade e condições de uso da plataforma Dinheiro em Mão em Angola.');
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
