@@ -17,9 +17,10 @@ interface ZoneCardProps {
   zone: ZoneCardData;
   isSubscribed?: boolean;
   onClick?: () => void;
+  pricePerAtm?: number;
 }
 
-export function ZoneCard({ zone, isSubscribed = false, onClick }: ZoneCardProps) {
+export function ZoneCard({ zone, isSubscribed = false, onClick, pricePerAtm = 500 }: ZoneCardProps) {
   return (
     <div
       onClick={onClick}
@@ -71,7 +72,7 @@ export function ZoneCard({ zone, isSubscribed = false, onClick }: ZoneCardProps)
           {zone.price_kz === 0 ? (
             <>
               <span className="text-2xl font-bold text-foreground">
-                {(zone.atm_count ?? 0) > 0 ? ((zone.atm_count ?? 0) * 500).toLocaleString() : 'Grátis'}
+                {(zone.atm_count ?? 0) > 0 ? ((zone.atm_count ?? 0) * pricePerAtm).toLocaleString() : 'Grátis'}
               </span>
               {(zone.atm_count ?? 0) > 0 && <span className="text-sm text-muted-foreground ml-1">KZ / mês</span>}
             </>

@@ -24,6 +24,7 @@ interface ZonesMapProps {
   subscribedZoneIds?: Set<string>;
   onZoneSelect?: (zoneId: string) => void;
   className?: string;
+  pricePerAtm?: number;
 }
 
 interface ATMMarkerData {
@@ -77,7 +78,7 @@ const GeolocateOnMount: React.FC = () => {
   return null;
 };
 
-export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = new Set(), onZoneSelect, className = '' }) => {
+export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = new Set(), onZoneSelect, className = '', pricePerAtm = 500 }) => {
   const [selectedZone, setSelectedZone] = useState<ZoneCardData | null>(null);
   const [atms, setAtms] = useState<ATMMarkerData[]>([]);
 
@@ -201,7 +202,7 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
           </div>
           <div className="flex items-center gap-4 mt-3 text-sm">
             <span className="text-muted-foreground">{selectedZone.atm_count ?? 0} ATMs</span>
-            <span className="text-foreground font-semibold ml-auto">{selectedZone.price_kz.toLocaleString()} KZ</span>
+            <span className="text-foreground font-semibold ml-auto">{(selectedZone.price_kz > 0 ? selectedZone.price_kz : (selectedZone.atm_count ?? 0) * pricePerAtm).toLocaleString()} KZ</span>
           </div>
           <Button className="w-full mt-4" size="sm" onClick={handleViewZone}>Ver Zona</Button>
         </div>

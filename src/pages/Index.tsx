@@ -39,9 +39,11 @@ const Index = () => {
   const [subscribedZoneIds, setSubscribedZoneIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [pricePerAtm, setPricePerAtm] = useState(500);
 
   useEffect(() => {
     fetchZones();
+    fetchPricePerAtm();
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => setSortBy('recent')
@@ -51,6 +53,11 @@ const Index = () => {
   useEffect(() => {
     if (user) fetchSubscriptions();
   }, [user]);
+
+  const fetchPricePerAtm = async () => {
+    const { data } = await supabase.from('platform_settings').select('value').eq('key', 'price_per_atm').single();
+    if (data) setPricePerAtm(Number(data.value) || 500);
+  };
 
   const fetchZones = async () => {
     const [zonesRes, atmsRes] = await Promise.all([
@@ -228,7 +235,7 @@ const Index = () => {
               <h2 className="text-lg font-semibold text-foreground">Mapa de Zonas</h2>
               <span className="text-sm text-muted-foreground">{filteredZones.length} zona{filteredZones.length !== 1 ? 's' : ''}</span>
             </div>
-            <ZonesMap zones={filteredZones} subscribedZoneIds={subscribedZoneIds} onZoneSelect={handleZoneClick} className="h-[500px] md:h-[600px]" />
+            <ZonesMap zones={filteredZones} subscribedZoneIds={subscribedZoneIds} onZoneSelect={handleZoneClick} className="h-[500px] md:h-[600px]" pricePerAtm={pricePerAtm} />
           </div>
         ) : (
           <>
@@ -252,6 +259,7 @@ const Index = () => {
                       zone={zone}
                       isSubscribed={subscribedZoneIds.has(zone.id)}
                       onClick={() => handleZoneClick(zone.id)}
+                      pricePerAtm={pricePerAtm}
                     />
                   </div>
                 ))}

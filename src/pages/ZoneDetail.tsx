@@ -34,9 +34,15 @@ const ZoneDetail = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pricePerAtm, setPricePerAtm] = useState(500);
 
-  useEffect(() => { if (id) fetchZone(); }, [id]);
+  useEffect(() => { if (id) { fetchZone(); fetchPricePerAtm(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
+
+  const fetchPricePerAtm = async () => {
+    const { data } = await supabase.from('platform_settings').select('value').eq('key', 'price_per_atm').single();
+    if (data) setPricePerAtm(Number(data.value) || 500);
+  };
 
   const fetchZone = async () => {
     const [zoneRes, atmsRes] = await Promise.all([
@@ -83,7 +89,7 @@ const ZoneDetail = () => {
     );
   }
 
-  const effectivePrice = zone.price_kz > 0 ? zone.price_kz : atms.length * 500;
+  const effectivePrice = zone.price_kz > 0 ? zone.price_kz : atms.length * pricePerAtm;
 
   const atmStats = {
     available: atms.filter(a => a.has_cash).length,
