@@ -56,6 +56,13 @@ const ROLE_CONFIG: Record<string, { label: string; icon: typeof Shield; colorCla
     bgClass: 'bg-primary/10 border-primary/20',
     description: 'Gestão de ATMs atribuídos',
   },
+  financeiro: {
+    label: 'Financeiro',
+    icon: TrendingUp,
+    colorClass: 'text-emerald-600 dark:text-emerald-400',
+    bgClass: 'bg-emerald-500/10 border-emerald-500/20',
+    description: 'Análise financeira e controlo de preços',
+  },
 };
 
 type FilterRole = 'all' | 'admin' | 'supervisor' | 'agent';
