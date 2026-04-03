@@ -39,9 +39,11 @@ const Index = () => {
   const [subscribedZoneIds, setSubscribedZoneIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [pricePerAtm, setPricePerAtm] = useState(500);
 
   useEffect(() => {
     fetchZones();
+    fetchPricePerAtm();
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => setSortBy('recent')
