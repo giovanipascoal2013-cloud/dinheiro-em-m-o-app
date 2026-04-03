@@ -11,11 +11,11 @@ const fetchPricePerAtm = async (): Promise<number> => {
 };
 
 export const usePricePerAtm = () => {
-  const { data: pricePerAtm = 500 } = useQuery({
+  const { data: pricePerAtm = 500, isLoading } = useQuery({
     queryKey: ['platform_settings', 'price_per_atm'],
     queryFn: fetchPricePerAtm,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
-  return pricePerAtm;
+  return { pricePerAtm, isLoadingPrice: isLoading };
 };
