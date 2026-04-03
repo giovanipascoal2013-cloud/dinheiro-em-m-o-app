@@ -138,6 +138,27 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           cidade: string | null
