@@ -1,9 +1,19 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { MapPin } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiZGluaGVpcm9lbW1hbyIsImEiOiJjbW15eG83OGcwMmlvMm9yNG1mZnJ2MmV6In0.40U0QUqTx_3joFZkLj5uFQ';
+// Fix default marker icon (Vite bundler issue)
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
+});
 
 interface MiniMapProps {
   latitude: number;
@@ -12,74 +22,59 @@ interface MiniMapProps {
   height?: string;
 }
 
+const MapClickHandler: React.FC<{ onPositionChange: (lat: number, lng: number) => void }> = ({ onPositionChange }) => {
+  useMapEvents({
+    click(e) {
+      onPositionChange(parseFloat(e.latlng.lat.toFixed(6)), parseFloat(e.latlng.lng.toFixed(6)));
+    },
+  });
+  return null;
+};
+
+const RecenterMap: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
+  const map = useMap();
+  const prevRef = useRef({ lat, lng });
+
+  useEffect(() => {
+    if (Math.abs(prevRef.current.lat - lat) > 0.0001 || Math.abs(prevRef.current.lng - lng) > 0.0001) {
+      map.flyTo([lat, lng], map.getZoom(), { duration: 0.5 });
+      prevRef.current = { lat, lng };
+    }
+  }, [lat, lng, map]);
+
+  return null;
+};
+
 export const MiniMap: React.FC<MiniMapProps> = ({ latitude, longitude, onPositionChange, height = '200px' }) => {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
-  const [error, setError] = useState(false);
+  const markerRef = useRef<L.Marker>(null);
 
   const handleDragEnd = useCallback(() => {
-    if (!marker.current) return;
-    const lngLat = marker.current.getLngLat();
-    onPositionChange(parseFloat(lngLat.lat.toFixed(6)), parseFloat(lngLat.lng.toFixed(6)));
+    const m = markerRef.current;
+    if (!m) return;
+    const pos = m.getLatLng();
+    onPositionChange(parseFloat(pos.lat.toFixed(6)), parseFloat(pos.lng.toFixed(6)));
   }, [onPositionChange]);
 
-  useEffect(() => {
-    if (!mapContainer.current || error) return;
-    mapboxgl.accessToken = MAPBOX_TOKEN;
-
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: [longitude, latitude],
-        zoom: 14,
-      });
-
-      map.current.on('error', () => setError(true));
-
-      marker.current = new mapboxgl.Marker({ draggable: true, color: 'hsl(217, 91%, 60%)' })
-        .setLngLat([longitude, latitude])
-        .addTo(map.current);
-
-      marker.current.on('dragend', handleDragEnd);
-
-      map.current.on('click', (e) => {
-        marker.current?.setLngLat(e.lngLat);
-        onPositionChange(parseFloat(e.lngLat.lat.toFixed(6)), parseFloat(e.lngLat.lng.toFixed(6)));
-      });
-    } catch {
-      setError(true);
-    }
-
-    return () => {
-      map.current?.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (marker.current && map.current) {
-      const current = marker.current.getLngLat();
-      if (Math.abs(current.lat - latitude) > 0.0001 || Math.abs(current.lng - longitude) > 0.0001) {
-        marker.current.setLngLat([longitude, latitude]);
-        map.current.flyTo({ center: [longitude, latitude], duration: 500 });
-      }
-    }
-  }, [latitude, longitude]);
-
-  if (error) {
-    return (
-      <div className="rounded-lg overflow-hidden border border-border bg-muted flex flex-col items-center justify-center gap-2 text-muted-foreground text-sm" style={{ height }}>
-        <MapPin className="h-6 w-6" />
-        <span>Mapa indisponível</span>
-        <span className="text-xs">Lat: {latitude}, Lng: {longitude}</span>
-      </div>
-    );
-  }
+  const eventHandlers = useMemo(() => ({ dragend: handleDragEnd }), [handleDragEnd]);
 
   return (
     <div className="rounded-lg overflow-hidden border border-border" style={{ height }}>
-      <div ref={mapContainer} className="w-full h-full" />
+      <MapContainer
+        center={[latitude, longitude]}
+        zoom={14}
+        style={{ width: '100%', height: '100%' }}
+        attributionControl={false}
+      >
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <Marker
+          position={[latitude, longitude]}
+          draggable
+          ref={markerRef}
+          eventHandlers={eventHandlers}
+        />
+        <MapClickHandler onPositionChange={onPositionChange} />
+        <RecenterMap lat={latitude} lng={longitude} />
+      </MapContainer>
     </div>
   );
 };
