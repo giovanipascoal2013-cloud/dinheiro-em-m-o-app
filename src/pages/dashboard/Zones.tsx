@@ -206,6 +206,12 @@ export default function ZonesPage() {
                       <MiniStat icon={Users} label="Agentes" value={zoneDetail.agents.length} />
                       <MiniStat icon={TrendingUp} label="Receita" value={`${zoneDetail.totalBilling.toLocaleString()} KZ`} />
                     </div>
+                    {zoneDetail.atms.length > 0 && (
+                      <div className="text-xs text-muted-foreground flex items-start gap-1.5">
+                        <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>{zoneDetail.atms[0].address}{zoneDetail.atms.length > 1 ? ` (+${zoneDetail.atms.length - 1} endereços)` : ''}</span>
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       Coordenadas: {detailZone.latitude.toFixed(4)}, {detailZone.longitude.toFixed(4)}
                     </div>
