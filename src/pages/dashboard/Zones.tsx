@@ -180,7 +180,9 @@ export default function ZonesPage() {
                   {detailZone.status === 'active' ? 'Activa' : 'Suspensa'}
                 </Badge>
                 <span className="text-lg font-bold text-foreground">
-                  {detailZone.price_kz === 0 ? 'A calcular' : `${detailZone.price_kz.toLocaleString()} KZ`}
+                  {detailZone.price_kz > 0 
+                    ? `${detailZone.price_kz.toLocaleString()} KZ` 
+                    : zoneDetail ? `${(zoneDetail.atms.length * 500).toLocaleString()} KZ (auto)` : 'A calcular'}
                 </span>
               </div>
 
