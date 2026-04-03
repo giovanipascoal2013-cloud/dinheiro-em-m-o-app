@@ -18,6 +18,7 @@ import RolesPage from "./pages/dashboard/Roles";
 import UsersPage from "./pages/dashboard/Users";
 import SubscriptionsPage from "./pages/dashboard/Subscriptions";
 import WithdrawalsPage from "./pages/dashboard/Withdrawals";
+import AssignmentsPage from "./pages/dashboard/Assignments";
 import AgentDashboard from "./pages/AgentDashboard";
 import Profile from "./pages/Profile";
 const queryClient = new QueryClient();
