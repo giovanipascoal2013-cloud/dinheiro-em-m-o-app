@@ -334,7 +334,7 @@ function ZoneCard({ zone, onEdit, onDelete, onClick, onToggleStatus, canManage }
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <span className="text-base font-bold text-foreground">
-          {zone.price_kz === 0 ? 'A calcular' : `${zone.price_kz.toLocaleString()} KZ`}
+          {zone.price_kz > 0 ? `${zone.price_kz.toLocaleString()} KZ` : 'Auto (500 KZ/ATM)'}
         </span>
       </div>
     </div>

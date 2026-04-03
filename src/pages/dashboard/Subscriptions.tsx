@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, XCircle, Clock, Loader2, Search } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, Loader2, Search, Filter } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,11 +25,13 @@ interface SubscriptionRow {
   zone_name?: string;
 }
 
+type FilterType = 'pending' | 'active' | 'rejected' | 'expired' | 'all';
+
 export default function SubscriptionsPage() {
   const { user } = useAuth();
   const [subscriptions, setSubscriptions] = useState<SubscriptionRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const [filter, setFilter] = useState<FilterType>('pending');
   const [search, setSearch] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
   const [rejectDialog, setRejectDialog] = useState<string | null>(null);
@@ -41,16 +43,23 @@ export default function SubscriptionsPage() {
   const fetchSubscriptions = async () => {
     setLoading(true);
     try {
+      // Auto-reject pending subs older than 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      await supabase.from('subscriptions')
+        .update({ status: 'rejected' })
+        .eq('status', 'pending')
+        .lt('created_at', thirtyDaysAgo.toISOString());
+
       let query = supabase.from('subscriptions').select('*');
-      if (filter === 'pending') {
-        query = query.eq('status', 'pending');
+      if (filter !== 'all') {
+        query = query.eq('status', filter);
       }
       query = query.order('created_at', { ascending: false });
 
       const { data: subs } = await query;
       if (!subs) { setSubscriptions([]); setLoading(false); return; }
 
-      // Fetch user profiles and zone names
       const userIds = [...new Set(subs.map(s => s.user_id).filter(Boolean))] as string[];
       const zoneIds = [...new Set(subs.map(s => s.zone_id))];
 
@@ -89,14 +98,12 @@ export default function SubscriptionsPage() {
 
       if (error) throw error;
 
-      // Update transaction status
       if (sub.payment_ref) {
         await supabase.from('transactions')
           .update({ status: 'completed' })
           .eq('payment_ref', sub.payment_ref);
       }
 
-      // Notify user
       if (sub.user_id) {
         await supabase.from('notifications').insert({
           user_id: sub.user_id,
@@ -131,7 +138,6 @@ export default function SubscriptionsPage() {
           .eq('payment_ref', sub.payment_ref);
       }
 
-      // Notify user
       if (sub?.user_id) {
         await supabase.from('notifications').insert({
           user_id: sub.user_id,
@@ -173,30 +179,35 @@ export default function SubscriptionsPage() {
     expired: 'Expirada',
   };
 
+  const filterButtons: { key: FilterType; label: string }[] = [
+    { key: 'pending', label: 'Pendentes' },
+    { key: 'active', label: 'Ativas' },
+    { key: 'rejected', label: 'Rejeitadas' },
+    { key: 'expired', label: 'Expiradas' },
+    { key: 'all', label: 'Todas' },
+  ];
+
   return (
     <DashboardLayout title="Subscrições" subtitle="Aprovar ou rejeitar subscrições">
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="flex gap-2">
-          <Button 
-            variant={filter === 'pending' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setFilter('pending')}
-          >
-            <Clock className="h-4 w-4 mr-1" /> Pendentes
-          </Button>
-          <Button 
-            variant={filter === 'all' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setFilter('all')}
-          >
-            Todas
-          </Button>
+      <div className="flex flex-col gap-3 mb-6">
+        <div className="flex gap-1.5 flex-wrap">
+          {filterButtons.map(fb => (
+            <Button
+              key={fb.key}
+              variant={filter === fb.key ? 'default' : 'outline'}
+              size="sm"
+              className="text-xs h-8"
+              onClick={() => setFilter(fb.key)}
+            >
+              {fb.label}
+            </Button>
+          ))}
         </div>
-        <div className="relative flex-1">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Pesquisar por nome, telefone ou referência..."
+            placeholder="Pesquisar por nome, telefone, referência ou zona..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9"
@@ -211,7 +222,7 @@ export default function SubscriptionsPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
           <Clock className="h-12 w-12 mx-auto mb-3 opacity-50" />
-          <p>Nenhuma subscrição {filter === 'pending' ? 'pendente' : ''} encontrada.</p>
+          <p>Nenhuma subscrição {filter !== 'all' ? statusLabels[filter]?.toLowerCase() : ''} encontrada.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -260,7 +271,6 @@ export default function SubscriptionsPage() {
         </div>
       )}
 
-      {/* Reject confirmation dialog */}
       <Dialog open={!!rejectDialog} onOpenChange={() => setRejectDialog(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>

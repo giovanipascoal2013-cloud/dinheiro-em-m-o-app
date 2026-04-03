@@ -159,7 +159,13 @@ export default function AssignmentsPage() {
 
   const handleAssignZoneToAgent = async () => {
     if (!selectedAgentId || !targetAgentZoneId) return;
-    // Check if already assigned
+    // Check if zone already has an agent (UNIQUE constraint)
+    const existingAgent = agents.find(a => a.zones.some(z => z.zone_id === targetAgentZoneId));
+    if (existingAgent) {
+      toast({ title: 'Esta zona já tem um agente atribuído', description: `Agente: ${existingAgent.nome || existingAgent.telefone}. Remova-o primeiro.`, variant: 'destructive' });
+      return;
+    }
+    // Check if this agent already has this zone
     const agent = agents.find(a => a.user_id === selectedAgentId);
     if (agent?.zones.some(z => z.zone_id === targetAgentZoneId)) {
       toast({ title: 'Zona já atribuída a este agente', variant: 'destructive' });
