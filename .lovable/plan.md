@@ -1,48 +1,51 @@
 
 
-## Plano: Corrigir precificação dinâmica em toda a aplicação
+## Plano: Proteger informação de ATMs no mapa público
 
-### Problema identificado
+### Problema
 
-O preço base por ATM (`platform_settings.price_per_atm`) é alterado no dashboard financeiro, mas **3 locais** continuam a usar o valor hardcoded `500` em vez de ler da base de dados:
+O mapa actual revela o estado dos ATMs (verde/vermelho/cinza) a **todos os visitantes**, incluindo não autenticados e não subscritos. As cores e a legenda entregam a informação sem necessidade de subscrição, anulando o modelo de negócio.
 
-1. **`ZoneCard.tsx` (linha 74)** — `(zone.atm_count ?? 0) * 500` hardcoded
-2. **`ZoneDetail.tsx` (linha 86)** — `atms.length * 500` hardcoded
-3. **`ZonesMap.tsx` (linha 204)** — mostra `zone.price_kz` directamente (0 KZ para zonas automáticas) sem calcular o preço efectivo
+Além disso, ATMs sem zona associada (`zone_id = null`) mostram popup com dados completos — deviam apresentar uma mensagem para contactar o suporte.
 
 ### Solução
 
-**Abordagem**: Carregar `platform_settings.price_per_atm` nos componentes que mostram preços e usar esse valor no cálculo.
+#### 1. Ícones neutros para não-subscritores
 
-#### 1. `ZoneCard.tsx`
-- Adicionar prop `pricePerAtm: number` (default 500)
-- Substituir `* 500` por `* pricePerAtm`
+- Todos os ATMs cujo `zone_id` **não** esteja no `subscribedZoneIds` usam um **ícone neutro azul** (cor única, sem revelar estado).
+- Apenas ATMs de zonas subscritas mantêm o ícone colorido (verde/vermelho/cinza).
 
-#### 2. `Index.tsx` (consumidor do ZoneCard)
-- Fazer fetch de `platform_settings` com key `price_per_atm` no `useEffect`
-- Passar `pricePerAtm` como prop a cada `ZoneCard`
+#### 2. Legenda condicional
 
-#### 3. `ZoneDetail.tsx`
-- Fazer fetch de `platform_settings.price_per_atm` no `useEffect` existente
-- Substituir `atms.length * 500` por `atms.length * pricePerAtm`
+- A legenda (verde/vermelho/cinza) só aparece se `subscribedZoneIds.size > 0`.
+- Se não houver subscrições, mostrar legenda genérica: "Subscreva uma zona para ver o estado dos ATMs".
 
-#### 4. `ZonesMap.tsx`
-- Adicionar prop `pricePerAtm: number` (default 500)
-- No popup da zona seleccionada, calcular preço efectivo: `zone.price_kz > 0 ? zone.price_kz : (zone.atm_count ?? 0) * pricePerAtm`
+#### 3. Comportamento ao clicar num ATM
 
-#### 5. `Index.tsx` → `ZonesMap`
-- Passar `pricePerAtm` ao componente `ZonesMap`
+**Caso A — Subscrito à zona:** Popup com informação completa (como está hoje).
 
-### Ficheiros a modificar
+**Caso B — Não subscrito mas ATM tem zona:** Card inferior com info da zona + botão "Subscrever Zona" (já existe).
+
+**Caso C — ATM sem zona (`zone_id = null`):** Popup com mensagem:
+> "Este ATM ainda não está coberto por nenhuma zona. Contacte o suporte para solicitar a activação."
+> Botão com link para WhatsApp do suporte (número já usado no footer: +244 933 986 318).
+
+#### 4. Notificação ao suporte (futuro simples)
+
+Por agora, o botão abre o WhatsApp com mensagem pré-preenchida contendo o ID do ATM. Sem necessidade de tabela nova.
+
+---
+
+### Ficheiro a modificar
 
 | Ficheiro | Alteração |
 |---|---|
-| `src/components/ZoneCard.tsx` | Nova prop `pricePerAtm`, usar no cálculo |
-| `src/components/ZonesMap.tsx` | Nova prop `pricePerAtm`, preço efectivo no popup |
-| `src/pages/Index.tsx` | Fetch `platform_settings`, passar prop aos filhos |
-| `src/pages/ZoneDetail.tsx` | Fetch `platform_settings`, substituir `* 500` |
+| `src/components/ZonesMap.tsx` | Ícone neutro, legenda condicional, popup caso C, lógica de clique revista |
 
-### Impacto
-- Todos os preços na landing page, cards, mapa e página de detalhe passam a reflectir o valor definido pelo financeiro
-- Zero alterações na base de dados — apenas leitura da tabela `platform_settings` já existente
+### Detalhes técnicos
+
+- Novo ícone: `createATMIcon('#3b82f6')` (azul neutro) para ATMs não-subscrito
+- Selecção de ícone: `isSubscribed ? (colorByStatus) : neutralIcon`
+- Popup caso C: link `https://wa.me/244933986318?text=...` com ID do ATM
+- Sem alterações na base de dados
 
