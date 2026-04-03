@@ -35,7 +35,7 @@ const ZoneDetail = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const pricePerAtm = usePricePerAtm();
+  const { pricePerAtm, isLoadingPrice } = usePricePerAtm();
 
   useEffect(() => { if (id) { fetchZone(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
@@ -131,7 +131,11 @@ const ZoneDetail = () => {
               <p className="text-xs text-muted-foreground">ATMs</p>
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
-              <p className="text-xl font-bold text-foreground">{effectivePrice}</p>
+              {isLoadingPrice ? (
+                <div className="h-7 w-12 mx-auto bg-muted rounded animate-pulse" />
+              ) : (
+                <p className="text-xl font-bold text-foreground">{effectivePrice}</p>
+              )}
               <p className="text-xs text-muted-foreground">KZ / mês</p>
             </div>
             <div className="bg-secondary/50 rounded-xl p-3 text-center">
