@@ -17,6 +17,7 @@ interface ZoneCardProps {
   zone: ZoneCardData;
   isSubscribed?: boolean;
   onClick?: () => void;
+  pricePerAtm?: number;
 }
 
 export function ZoneCard({ zone, isSubscribed = false, onClick }: ZoneCardProps) {
