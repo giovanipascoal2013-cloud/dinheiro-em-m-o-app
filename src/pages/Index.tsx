@@ -44,7 +44,6 @@ const Index = () => {
 
   useEffect(() => {
     fetchZones();
-    fetchPricePerAtm();
     navigator.geolocation?.getCurrentPosition(
       (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       () => setSortBy('recent')
