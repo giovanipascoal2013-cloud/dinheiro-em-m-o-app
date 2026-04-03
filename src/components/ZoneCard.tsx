@@ -20,7 +20,7 @@ interface ZoneCardProps {
   pricePerAtm?: number;
 }
 
-export function ZoneCard({ zone, isSubscribed = false, onClick }: ZoneCardProps) {
+export function ZoneCard({ zone, isSubscribed = false, onClick, pricePerAtm = 500 }: ZoneCardProps) {
   return (
     <div
       onClick={onClick}
