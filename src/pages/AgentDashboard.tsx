@@ -193,7 +193,7 @@ const AgentDashboard = () => {
                     </div>
                     <span className="text-xs text-muted-foreground">{zoneAgg?.total ?? 0} adesões</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {zone.price_kz.toLocaleString()} KZ/mês</p>
+                  <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {(zone.price_kz > 0 ? zone.price_kz : zoneAtms.length * 500).toLocaleString()} KZ/mês</p>
                   <div className="space-y-3">
                     {zoneAtms.map(atm => (
                       <ATMCard 
