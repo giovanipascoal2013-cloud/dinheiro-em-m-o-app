@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Search, Shield, ShieldCheck, ShieldAlert, Plus, Trash2, Users, UserCog, Crown, Loader2 } from 'lucide-react';
+import { Search, Shield, ShieldCheck, ShieldAlert, Plus, Trash2, Users, UserCog, Crown, Loader2, TrendingUp } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
