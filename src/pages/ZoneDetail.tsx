@@ -35,7 +35,7 @@ const ZoneDetail = () => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [pricePerAtm, setPricePerAtm] = useState(500);
+  const pricePerAtm = usePricePerAtm();
 
   useEffect(() => { if (id) { fetchZone(); fetchPricePerAtm(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
