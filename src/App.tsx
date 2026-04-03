@@ -93,6 +93,11 @@ const App = () => (
                 <AgentDashboard />
               </ProtectedRoute>
             } />
+            <Route path="/finance" element={
+              <ProtectedRoute requiredRoles={['financeiro', 'admin']}>
+                <FinanceDashboard />
+              </ProtectedRoute>
+            } />
             
             <Route path="*" element={<NotFound />} />
           </Routes>

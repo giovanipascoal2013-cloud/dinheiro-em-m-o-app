@@ -72,7 +72,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
     return false;
   });
 
-  const roleLabel = isAdmin ? 'Administrador' : isSupervisor ? 'Supervisor' : 'Agente';
+  const roleLabel = isAdmin ? 'Administrador' : isSupervisor ? 'Supervisor' : isFinanceiro ? 'Financeiro' : 'Agente';
 
   return (
     <div className="min-h-screen bg-background flex">
