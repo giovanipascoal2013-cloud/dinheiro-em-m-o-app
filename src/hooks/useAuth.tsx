@@ -22,6 +22,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isSupervisor: boolean;
   isAgent: boolean;
+  isFinanceiro: boolean;
   signOut: () => Promise<void>;
 }
 
