@@ -10,6 +10,7 @@ import { pt } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { Footer } from '@/components/Footer';
 import { useAuth } from '@/hooks/useAuth';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { cn } from '@/lib/utils';
 
 interface DBZone {

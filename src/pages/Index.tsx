@@ -8,6 +8,7 @@ import { ZonesMap } from '@/components/ZonesMap';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import logoIcon from '@/assets/logo-icon.png';
 import { Footer } from '@/components/Footer';
 
