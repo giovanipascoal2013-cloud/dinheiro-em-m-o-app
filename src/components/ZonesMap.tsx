@@ -56,6 +56,15 @@ const createATMIcon = (color: string) =>
     iconAnchor: [14, 14],
   });
 
+const InvalidateSize: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
+  }, [map]);
+  return null;
+};
+
 const GeolocateOnMount: React.FC = () => {
   const map = useMap();
   useEffect(() => {
