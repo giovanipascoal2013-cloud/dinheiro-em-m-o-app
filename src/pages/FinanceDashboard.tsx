@@ -156,6 +156,7 @@ export default function FinanceDashboard() {
     } else {
       setPricePerAtm(String(val));
       setEditingPricePerAtm(false);
+      queryClient.invalidateQueries({ queryKey: ['platform_settings', 'price_per_atm'] });
       toast({ title: 'Preço base actualizado' });
     }
     setSavingSettings(false);
