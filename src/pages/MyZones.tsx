@@ -139,6 +139,7 @@ export default function MyZones() {
           </div>
         )}
       </main>
+      <Footer />
     </div>
   );
 }
