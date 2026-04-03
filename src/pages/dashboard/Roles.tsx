@@ -197,6 +197,7 @@ export default function RolesPage() {
         <StatCard label="Administradores" value={stats.admin} icon={Crown} active={filterRole === 'admin'} onClick={() => setFilterRole('admin')} />
         <StatCard label="Supervisores" value={stats.supervisor} icon={ShieldCheck} active={filterRole === 'supervisor'} onClick={() => setFilterRole('supervisor')} />
         <StatCard label="Agentes" value={stats.agent} icon={ShieldAlert} active={filterRole === 'agent'} onClick={() => setFilterRole('agent')} />
+        <StatCard label="Financeiros" value={stats.financeiro} icon={TrendingUp} active={filterRole === 'financeiro'} onClick={() => setFilterRole('financeiro')} />
       </div>
 
       {/* Toolbar */}
