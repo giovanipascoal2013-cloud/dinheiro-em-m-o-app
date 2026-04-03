@@ -46,6 +46,15 @@ const RecenterMap: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
   return null;
 };
 
+const InvalidateSize: React.FC = () => {
+  const map = useMap();
+  useEffect(() => {
+    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 500);
+  }, [map]);
+  return null;
+};
+
 export const MiniMap: React.FC<MiniMapProps> = ({ latitude, longitude, onPositionChange, height = '200px' }) => {
   const markerRef = useRef<L.Marker>(null);
 
