@@ -20,6 +20,7 @@ import SubscriptionsPage from "./pages/dashboard/Subscriptions";
 import WithdrawalsPage from "./pages/dashboard/Withdrawals";
 import AssignmentsPage from "./pages/dashboard/Assignments";
 import AgentDashboard from "./pages/AgentDashboard";
+import FinanceDashboard from "./pages/FinanceDashboard";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Terms from "./pages/Terms";
