@@ -24,6 +24,8 @@ interface DBAtm {
 
 const ZoneDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || '';
   const { user } = useAuth();
   const navigate = useNavigate();
   const [zone, setZone] = useState<DBZone | null>(null);
