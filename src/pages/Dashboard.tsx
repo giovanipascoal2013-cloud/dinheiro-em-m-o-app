@@ -11,6 +11,7 @@ import {
   Eye
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { DashboardHint } from '@/components/DashboardHint';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -93,6 +94,7 @@ export default function Dashboard() {
       title={`Olá, ${profile?.nome?.split(' ')[0] || 'Utilizador'}!`}
       subtitle={`Painel de ${roleLabel}`}
     >
+      <DashboardHint role={isAdmin ? 'admin' : 'supervisor'} />
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard

@@ -3,6 +3,8 @@ import {
   MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { DashboardHint } from '@/components/DashboardHint';
+import { ReferralShare } from '@/components/ReferralShare';
 import { Switch } from '@/components/ui/switch';
 import { WithdrawalModal } from '@/components/WithdrawalModal';
 import { useAuth } from '@/hooks/useAuth';
@@ -27,11 +29,12 @@ interface ATM {
   obs: string | null; last_updated: string; zone_id: string; 
 }
 interface SubscriptionAgg { zone_id: string; total: number; expired_amount: number; active_amount: number; }
+interface AgentZoneRef { zone_id: string; referral_code: string; }
 
 const AGENT_SHARE = 0.7;
 
 const AgentDashboard = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [zones, setZones] = useState<Zone[]>([]);
   const [atms, setAtms] = useState<ATM[]>([]);
   const [subscriptionAggs, setSubscriptionAggs] = useState<SubscriptionAgg[]>([]);
@@ -41,6 +44,7 @@ const AgentDashboard = () => {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [editingObs, setEditingObs] = useState<string | null>(null);
   const [obsText, setObsText] = useState('');
+  const [agentZoneRefs, setAgentZoneRefs] = useState<AgentZoneRef[]>([]);
 
   useEffect(() => { if (user) fetchData(); }, [user]);
 
@@ -48,7 +52,8 @@ const AgentDashboard = () => {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: agentZones } = await supabase.from('agent_zones').select('zone_id').eq('agent_id', user.id);
+      const { data: agentZones } = await supabase.from('agent_zones').select('zone_id, referral_code').eq('agent_id', user.id);
+      setAgentZoneRefs((agentZones as AgentZoneRef[]) ?? []);
       const zoneIds = agentZones?.map(az => az.zone_id) ?? [];
 
       if (zoneIds.length === 0) {
@@ -131,6 +136,7 @@ const AgentDashboard = () => {
 
   return (
     <DashboardLayout title="Meu Painel" subtitle="Painel do Agente">
+      <DashboardHint role="agent" />
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-3 mb-6">
         <StatCard icon={MapPin} label="Zonas" value={zones.length} color="primary" />
@@ -172,7 +178,20 @@ const AgentDashboard = () => {
               return (
                 <div key={zone.id} className="bg-card rounded-xl p-4 shadow-card border border-border/50">
                   <div className="flex items-center justify-between mb-1">
-                    <h3 className="font-semibold text-foreground text-sm">{zone.name}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground text-sm">{zone.name}</h3>
+                      {(() => {
+                        const ref = agentZoneRefs.find(r => r.zone_id === zone.id);
+                        return ref ? (
+                          <ReferralShare
+                            zoneName={zone.name}
+                            zoneId={zone.id}
+                            referralCode={ref.referral_code}
+                            agentName={profile?.nome || 'Agente'}
+                          />
+                        ) : null;
+                      })()}
+                    </div>
                     <span className="text-xs text-muted-foreground">{zoneAgg?.total ?? 0} adesões</span>
                   </div>
                   <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {zone.price_kz.toLocaleString()} KZ/mês</p>

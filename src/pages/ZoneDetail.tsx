@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, FileText, AlertTriangle } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { PaymentModal } from '@/components/PaymentModal';
@@ -24,6 +24,8 @@ interface DBAtm {
 
 const ZoneDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || '';
   const { user } = useAuth();
   const navigate = useNavigate();
   const [zone, setZone] = useState<DBZone | null>(null);
@@ -211,7 +213,7 @@ const ZoneDetail = () => {
         )}
       </main>
 
-      <PaymentModal zone={{ ...zone, price_kz: effectivePrice }} isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSuccess={handlePaymentSuccess} />
+      <PaymentModal zone={{ ...zone, price_kz: effectivePrice }} isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} onSuccess={handlePaymentSuccess} initialRefCode={refCode} />
     </div>
   );
 };

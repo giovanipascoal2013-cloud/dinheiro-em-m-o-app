@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Copy, CheckCircle, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
+import { Copy, CheckCircle, MessageCircle, Loader2, AlertCircle, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,20 +18,29 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  initialRefCode?: string;
 }
 
 const COMPANY_IBAN = '0040 0000 1340 3139 1010 5';
 const COMPANY_WHATSAPP = '933 986 318';
+const REFERRAL_DISCOUNT = 0.3;
 
 type Step = 'info' | 'processing' | 'pending' | 'error';
 
-export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalProps) {
+export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode }: PaymentModalProps) {
   const [step, setStep] = useState<Step>('info');
   const [paymentRef, setPaymentRef] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [refCode, setRefCode] = useState('');
+  const [refValid, setRefValid] = useState<boolean | null>(null);
+  const [refAgentId, setRefAgentId] = useState<string | null>(null);
+  const [checkingRef, setCheckingRef] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const discount = refValid ? Math.round(zone.price_kz * REFERRAL_DISCOUNT) : 0;
+  const finalPrice = zone.price_kz - discount;
 
   useEffect(() => {
     if (isOpen) {
@@ -38,8 +48,32 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
       setPaymentRef(ref);
       setStep('info');
       setError(null);
+      setRefCode(initialRefCode || '');
+      setRefValid(null);
+      setRefAgentId(null);
+      if (initialRefCode) validateRefCode(initialRefCode);
     }
   }, [isOpen]);
+
+  const validateRefCode = async (code: string) => {
+    if (!code || code.length < 3) { setRefValid(null); setRefAgentId(null); return; }
+    setCheckingRef(true);
+    const { data } = await supabase
+      .from('agent_zones')
+      .select('agent_id, zone_id')
+      .eq('referral_code', code.toUpperCase())
+      .eq('zone_id', zone.id)
+      .maybeSingle();
+    
+    if (data) {
+      setRefValid(true);
+      setRefAgentId(data.agent_id);
+    } else {
+      setRefValid(false);
+      setRefAgentId(null);
+    }
+    setCheckingRef(false);
+  };
 
   const copyToClipboard = async (text: string, field: string) => {
     await navigator.clipboard.writeText(text.replace(/\s/g, ''));
@@ -58,30 +92,40 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
     setStep('processing');
 
     try {
-      const { error: txError } = await supabase.from('transactions').insert({
+      const { data: txData, error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
         zone_id: zone.id,
-        amount_kz: zone.price_kz,
+        amount_kz: finalPrice,
         method: 'transferencia',
         status: 'pending',
         payment_ref: paymentRef,
-      });
+      }).select('id').single();
 
       if (txError) throw txError;
 
       const expiryDate = new Date();
       expiryDate.setMonth(expiryDate.getMonth() + 1);
 
-      const { error: subError } = await supabase.from('subscriptions').insert({
+      const { data: subData, error: subError } = await supabase.from('subscriptions').insert({
         user_id: user.id,
         zone_id: zone.id,
-        amount_kz: zone.price_kz,
+        amount_kz: finalPrice,
         expiry_date: expiryDate.toISOString(),
         payment_ref: paymentRef,
         status: 'pending',
-      });
+        transaction_id: txData?.id,
+      }).select('id').single();
 
       if (subError) throw subError;
+
+      // Track referral if valid
+      if (refValid && refAgentId && subData) {
+        await supabase.from('referrals').insert({
+          agent_id: refAgentId,
+          referral_code: refCode.toUpperCase(),
+          subscription_id: subData.id,
+        });
+      }
 
       setStep('pending');
     } catch (err: any) {
@@ -113,9 +157,56 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
               <h4 className="font-semibold text-foreground">{zone.name}</h4>
               <p className="text-sm text-muted-foreground mt-1">Acesso por 30 dias</p>
               <div className="flex items-baseline gap-1 mt-2">
-                <span className="text-3xl font-bold text-foreground">{zone.price_kz}</span>
-                <span className="text-muted-foreground">KZ</span>
+                {discount > 0 ? (
+                  <>
+                    <span className="text-lg line-through text-muted-foreground">{zone.price_kz}</span>
+                    <span className="text-3xl font-bold text-foreground">{finalPrice}</span>
+                    <span className="text-muted-foreground">KZ</span>
+                    <span className="bg-success/10 text-success text-xs font-semibold px-2 py-0.5 rounded-full ml-2">-30%</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold text-foreground">{zone.price_kz}</span>
+                    <span className="text-muted-foreground">KZ</span>
+                  </>
+                )}
               </div>
+            </div>
+
+            {/* Referral code input */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" />
+                Código de referência (opcional)
+              </label>
+              <div className="flex gap-2">
+                <Input
+                  value={refCode}
+                  onChange={(e) => {
+                    setRefCode(e.target.value.toUpperCase());
+                    setRefValid(null);
+                  }}
+                  placeholder="Ex: AB12CD34"
+                  className="font-mono uppercase"
+                  maxLength={10}
+                />
+                <Button 
+                  variant="outline" 
+                  onClick={() => validateRefCode(refCode)}
+                  disabled={checkingRef || refCode.length < 3}
+                  className="shrink-0"
+                >
+                  {checkingRef ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Validar'}
+                </Button>
+              </div>
+              {refValid === true && (
+                <p className="text-xs text-success flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" /> Código válido! 30% de desconto aplicado.
+                </p>
+              )}
+              {refValid === false && (
+                <p className="text-xs text-destructive">Código inválido para esta zona.</p>
+              )}
             </div>
 
             <div className="space-y-3">
@@ -129,6 +220,13 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
                 <Button variant="ghost" size="icon" onClick={() => copyToClipboard(COMPANY_IBAN, 'IBAN')}>
                   {copiedField === 'IBAN' ? <CheckCircle className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                 </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Valor a transferir</p>
+                  <p className="font-mono font-bold text-primary text-sm">{finalPrice.toLocaleString()} KZ</p>
+                </div>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
@@ -147,7 +245,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
                   <p className="font-semibold text-foreground text-sm">{COMPANY_WHATSAPP}</p>
                 </div>
                 <a
-                  href={`https://wa.me/244${COMPANY_WHATSAPP.replace(/\s/g, '')}?text=${encodeURIComponent(`Olá! Fiz a transferência para a zona "${zone.name}". Referência: ${paymentRef}`)}`}
+                  href={`https://wa.me/244${COMPANY_WHATSAPP.replace(/\s/g, '')}?text=${encodeURIComponent(`Olá! Fiz a transferência para a zona "${zone.name}". Referência: ${paymentRef}. Valor: ${finalPrice} KZ${refCode ? `. Código de referência: ${refCode}` : ''}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -184,6 +282,9 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess }: PaymentModalP
             <div>
               <p className="font-semibold text-foreground text-lg">Pagamento registado!</p>
               <p className="text-muted-foreground mt-1">A sua subscrição está pendente de aprovação.</p>
+              {discount > 0 && (
+                <p className="text-success text-sm mt-2">Desconto de {discount.toLocaleString()} KZ aplicado!</p>
+              )}
               <p className="text-xs text-muted-foreground mt-3 font-mono">Ref: {paymentRef}</p>
             </div>
             <Button variant="default" onClick={handleClose} className="mt-4">Entendido</Button>
