@@ -20,6 +20,7 @@ import { Link } from 'react-router-dom';
 const PLATFORM_MARGIN = 0.30;
 
 export default function FinanceDashboard() {
+  const queryClient = useQueryClient();
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [zones, setZones] = useState<any[]>([]);
