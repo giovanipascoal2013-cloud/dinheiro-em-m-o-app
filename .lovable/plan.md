@@ -1,97 +1,48 @@
 
 
-## Plano: Role "Financeiro" com Dashboard Corporativo (Actualizado)
+## Plano: Corrigir precificação dinâmica em toda a aplicação
 
-### Resumo
-Adicionar o role `financeiro` ao sistema com dashboard financeiro profissional, incluindo controlo total sobre preços de zonas e o preço base por ATM.
+### Problema identificado
 
----
+O preço base por ATM (`platform_settings.price_per_atm`) é alterado no dashboard financeiro, mas **3 locais** continuam a usar o valor hardcoded `500` em vez de ler da base de dados:
 
-### 1. Migração de Base de Dados
+1. **`ZoneCard.tsx` (linha 74)** — `(zone.atm_count ?? 0) * 500` hardcoded
+2. **`ZoneDetail.tsx` (linha 86)** — `atms.length * 500` hardcoded
+3. **`ZonesMap.tsx` (linha 204)** — mostra `zone.price_kz` directamente (0 KZ para zonas automáticas) sem calcular o preço efectivo
 
-```sql
--- Novo valor no enum
-ALTER TYPE public.app_role ADD VALUE 'financeiro';
+### Solução
 
--- Tabela de configuração de preços da plataforma
-CREATE TABLE public.platform_settings (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT now(),
-  updated_by UUID REFERENCES auth.users(id)
-);
-INSERT INTO platform_settings (key, value) VALUES ('price_per_atm', '500');
+**Abordagem**: Carregar `platform_settings.price_per_atm` nos componentes que mostram preços e usar esse valor no cálculo.
 
--- RLS: financeiro e admin podem ler e actualizar settings
--- RLS: financeiro pode SELECT em subscriptions, withdrawals, zones
--- RLS: financeiro pode UPDATE em withdrawals (processar levantamentos)
--- RLS: financeiro pode UPDATE price_kz em zones
-```
+#### 1. `ZoneCard.tsx`
+- Adicionar prop `pricePerAtm: number` (default 500)
+- Substituir `* 500` por `* pricePerAtm`
 
-### 2. Hook `useAuth` — Adicionar `isFinanceiro`
+#### 2. `Index.tsx` (consumidor do ZoneCard)
+- Fazer fetch de `platform_settings` com key `price_per_atm` no `useEffect`
+- Passar `pricePerAtm` como prop a cada `ZoneCard`
 
-Novo campo booleano exposto no contexto, redireccionamento pós-login para `/finance`.
+#### 3. `ZoneDetail.tsx`
+- Fazer fetch de `platform_settings.price_per_atm` no `useEffect` existente
+- Substituir `atms.length * 500` por `atms.length * pricePerAtm`
 
-### 3. Dashboard Financeiro (`/finance`)
+#### 4. `ZonesMap.tsx`
+- Adicionar prop `pricePerAtm: number` (default 500)
+- No popup da zona seleccionada, calcular preço efectivo: `zone.price_kz > 0 ? zone.price_kz : (zone.atm_count ?? 0) * pricePerAtm`
 
-Página nova: `src/pages/FinanceDashboard.tsx`
+#### 5. `Index.tsx` → `ZonesMap`
+- Passar `pricePerAtm` ao componente `ZonesMap`
 
-**KPIs (4-5 cards):** Receita Total, Receita Mensal, Pago a Agentes, Pendente, Margem (30%)
+### Ficheiros a modificar
 
-**Gráfico:** Barras mensais (Receita vs Pagamentos) com linha de margem — Recharts
-
-**Tabela por Zona:** Zona, Subscrições Activas, Receita, Pagamentos, Margem — ordenável
-
-**Levantamentos Recentes:** Últimos 10 com status, link para `/dashboard/withdrawals`
-
-### 4. Gestão de Preços (NOVO)
-
-Secção dedicada no dashboard financeiro com duas funcionalidades:
-
-**A — Preço Base por ATM (global):**
-- Card editável mostrando o valor actual da `platform_settings.price_per_atm`
-- Input com botão "Guardar" para alterar o preço base (ex: 500 KZ → 750 KZ)
-- Afecta todas as zonas com `price_kz = 0` (modo auto-cálculo)
-
-**B — Preços por Zona (individual):**
-- Tabela de todas as zonas com coluna editável de `price_kz`
-- Inline editing: clicar no preço, alterar, confirmar
-- Opção de repor para "Auto" (definir `price_kz = 0`)
-- Badge visual distinguindo zonas com preço manual vs automático
-
-**Lógica de preço efectivo actualizada:**
-- Se `zone.price_kz > 0` → usar preço manual
-- Se `zone.price_kz = 0` → `platform_settings.price_per_atm × nº ATMs`
-- Código existente em `ZoneDetail`, `ZoneCard`, `Index.tsx` adaptado para ler `platform_settings`
-
-### 5. Sidebar e Routing
-
-**DashboardLayout** — novos itens para financeiro:
-- Painel Financeiro → `/finance`
-- Levantamentos → `/dashboard/withdrawals`
-- Subscrições → `/dashboard/subscriptions`
-
-**App.tsx** — nova rota protegida:
-```
-/finance → ProtectedRoute requiredRoles=['financeiro','admin']
-```
-
-### 6. Página de Roles
-
-Actualizar `/dashboard/roles` para incluir card de estatística e atribuição do role `financeiro`.
-
----
-
-### Ficheiros
-
-| Ficheiro | Acção |
+| Ficheiro | Alteração |
 |---|---|
-| Migração SQL | Criar — enum + `platform_settings` + RLS |
-| `src/hooks/useAuth.tsx` | Modificar — `isFinanceiro` |
-| `src/components/DashboardLayout.tsx` | Modificar — nav financeiro |
-| `src/pages/FinanceDashboard.tsx` | **Criar** — dashboard + gestão de preços |
-| `src/pages/dashboard/Roles.tsx` | Modificar — incluir financeiro |
-| `src/App.tsx` | Modificar — rota `/finance` |
-| `src/pages/ZoneDetail.tsx` | Modificar — ler `price_per_atm` de settings |
-| `src/pages/Index.tsx` | Modificar — preço efectivo com settings |
+| `src/components/ZoneCard.tsx` | Nova prop `pricePerAtm`, usar no cálculo |
+| `src/components/ZonesMap.tsx` | Nova prop `pricePerAtm`, preço efectivo no popup |
+| `src/pages/Index.tsx` | Fetch `platform_settings`, passar prop aos filhos |
+| `src/pages/ZoneDetail.tsx` | Fetch `platform_settings`, substituir `* 500` |
+
+### Impacto
+- Todos os preços na landing page, cards, mapa e página de detalhe passam a reflectir o valor definido pelo financeiro
+- Zero alterações na base de dados — apenas leitura da tabela `platform_settings` já existente
 
