@@ -1,36 +1,37 @@
 
 
-## Plano: Implementar "Esqueceu a senha?"
+## Plano: Botão "Redefinir senha" na lista de utilizadores (Dashboard Admin)
 
 ### Resumo
-Substituir o toast placeholder por um fluxo completo de recuperação de senha com duas partes: envio do email de reset e página para definir nova senha.
+Adicionar um botão de acção em cada utilizador na página `/dashboard/users` que permite ao admin gerar e enviar um link de redefinição de senha. Para contas com email real, envia o link por email. Para contas telefone (`@dinheiroemao.ao`), gera uma senha temporária e mostra-a ao admin para comunicar ao utilizador.
 
-### 1. Página de Reset de Senha (`src/pages/ResetPassword.tsx`)
+### Abordagem
 
-- Página pública que verifica `type=recovery` no URL hash
-- Formulário com campo "Nova senha" e "Confirmar nova senha" (com toggle de visibilidade)
-- Chama `supabase.auth.updateUser({ password })` ao submeter
-- Após sucesso, redireciona para `/auth` com toast de confirmação
-- Se não houver token de recovery válido, mostra mensagem de erro com link para `/auth`
-- UI consistente com a página Auth (mesmo header com logo, footer, inputClasses)
+Como o reset por email só funciona com emails reais, e contas telefone usam emails fictícios, são necessárias duas estratégias:
 
-### 2. Modificar Auth.tsx
+- **Conta com email real**: chamar `resetPasswordForEmail` via uma edge function com service role key
+- **Conta com telefone** (`*@dinheiroemao.ao`): chamar `admin.updateUserById` na edge function para definir uma nova senha temporária, e mostrá-la ao admin num dialog
 
-- Substituir o `onClick` do botão "Esqueceu a senha?" para mostrar um mini-formulário inline (ou modal) que:
-  - Pede o email ou telefone (conforme o `loginMethod` activo)
-  - Se telefone: converte para `{phone}@dinheiroemao.ao`
-  - Chama `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
-  - Mostra toast de sucesso: "Se a conta existir, receberá um email com instruções"
+### 1. Edge Function `admin-reset-password`
 
-### 3. Rota no App.tsx
+- Recebe `{ user_id }` no body
+- Verifica que quem chama é admin (via `has_role`)
+- Busca o email do utilizador via `admin.getUserById`
+- Se email **não** termina em `@dinheiroemao.ao`: chama `resetPasswordForEmail` → responde `{ method: 'email' }`
+- Se email termina em `@dinheiroemao.ao`: gera senha aleatória de 8 chars, chama `admin.updateUserById({ password })` → responde `{ method: 'temporary', tempPassword }`
 
-- Adicionar `<Route path="/reset-password" element={<ResetPassword />} />` como rota pública
+### 2. Página Users.tsx
+
+- Adicionar botão `Key` (ícone) em cada linha de utilizador
+- Ao clicar, abre dialog de confirmação com o nome do utilizador
+- Ao confirmar, chama a edge function
+- Se resposta `method: 'email'`: toast "Link de redefinição enviado para o email do utilizador"
+- Se resposta `method: 'temporary'`: mostra dialog com a senha temporária para o admin copiar e enviar ao utilizador via WhatsApp
 
 ### Ficheiros
 
 | Ficheiro | Alteração |
 |---|---|
-| `src/pages/ResetPassword.tsx` | **Criar** — formulário de nova senha |
-| `src/pages/Auth.tsx` | Modificar — fluxo de recuperação no botão |
-| `src/App.tsx` | Modificar — adicionar rota `/reset-password` |
+| `supabase/functions/admin-reset-password/index.ts` | **Criar** — edge function |
+| `src/pages/dashboard/Users.tsx` | Adicionar botão + dialogs de reset |
 
