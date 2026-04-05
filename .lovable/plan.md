@@ -1,37 +1,48 @@
 
 
-## Plano: Alterar instruções de pagamento para Pagamento por Referência
+## Plano: IBAN do agente no perfil + pré-preenchimento nos levantamentos
 
-### Problema
-O modal de pagamento mostra instruções de transferência bancária (IBAN). O método passou a ser **Pagamento por Referência** via Multicaixa, com entidade **00930** (UNITEL Money) e referência **949 344 625**.
+### Resumo
+Adicionar campos `iban` e `iban_titular` à tabela `profiles` para que agentes registem os seus dados bancários no perfil. O modal de levantamento pré-preenche esses dados automaticamente. O dashboard de admin já mostra os dados via `bank_details` (sem alteração necessária).
 
-### Alterações em `src/components/PaymentModal.tsx`
+### 1. Migração de Base de Dados
 
-1. **Substituir constantes**:
-   - Remover `COMPANY_IBAN`
-   - Adicionar `PAYMENT_ENTITY = '00930'` e `PAYMENT_REFERENCE = '949 344 625'`
+Adicionar duas colunas à tabela `profiles`:
 
-2. **Secção de instruções (step 'info')**:
-   - Substituir o título "Dados para transferência" por "Dados para pagamento por referência"
-   - Adicionar bloco explicativo: "Vai ao Multicaixa, escolhe o menu Pagamentos → Pagamentos por Referência, escolhe a entidade UNITEL Money ou insere o código da entidade 00930."
-   - Substituir campo IBAN por dois campos:
-     - **Entidade**: `00930` (com botão copiar)
-     - **Referência de pagamento**: `949 344 625` (com botão copiar)
-   - Manter campo **Valor** e campo **Referência da plataforma** (gerada automaticamente)
+```sql
+ALTER TABLE public.profiles ADD COLUMN iban text;
+ALTER TABLE public.profiles ADD COLUMN iban_titular text;
+```
 
-3. **WhatsApp — mensagem simplificada**:
-   - A mensagem pré-preenchida passa a conter **apenas a referência da plataforma**: `Ref: ${paymentRef}`
-   - Texto do campo: "Enviar comprovativo via WhatsApp (incluir apenas a referência da plataforma)"
+### 2. Página de Perfil (`src/pages/Profile.tsx`)
 
-4. **Aviso inferior**:
-   - Alterar para: "Após o pagamento, envie o comprovativo por WhatsApp incluindo apenas a referência da plataforma para activar a sua subscrição."
+- Importar `useAuth` para verificar `isAgent`
+- Adicionar estados `iban` e `ibanTitular`
+- Carregar e guardar esses campos no fetch/update do perfil
+- Renderizar secção condicional (apenas para agentes) com:
+  - Separador visual "Dados Bancários (Levantamentos)"
+  - Campo "Titular da conta" (texto, max 120 chars)
+  - Campo "IBAN" (texto, mono, placeholder `AO06 ...`, max 34 chars)
+  - Nota explicativa: "Estes dados serão usados nas suas solicitações de levantamento"
 
-5. **Método na transação**:
-   - Alterar o valor de `method` no insert de `'transferencia'` para `'referencia'`
+### 3. Modal de Levantamento (`src/components/WithdrawalModal.tsx`)
 
-### Ficheiro a modificar
+- Ao abrir, fazer fetch do perfil do agente (`iban`, `iban_titular`)
+- Pré-preencher `titular` e `iban` com os dados do perfil
+- Se o agente não tiver IBAN cadastrado, mostrar aviso: "Configure o seu IBAN na página de perfil"
+- Remover a selecção de método (forçar sempre IBAN, já que é o requisito)
+  - **Alternativa**: manter Multicaixa Express como opção, mas pré-preencher apenas quando IBAN é seleccionado
+- Os campos continuam editáveis para correcções pontuais
+
+### 4. Sem alteração no Dashboard Admin
+
+O `Withdrawals.tsx` já lê `bank_details` do JSON gravado na tabela `withdrawals`. Como o modal já grava `{ titular, iban, banco }`, os dados do perfil fluem automaticamente para o admin.
+
+### Ficheiros a modificar
 
 | Ficheiro | Alteração |
 |---|---|
-| `src/components/PaymentModal.tsx` | Constantes, instruções, campos, mensagem WhatsApp, método da transação |
+| Migração SQL | +2 colunas `iban`, `iban_titular` em `profiles` |
+| `src/pages/Profile.tsx` | Secção bancária condicional para agentes |
+| `src/components/WithdrawalModal.tsx` | Fetch perfil, pré-preencher IBAN/titular |
 
