@@ -211,42 +211,58 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-foreground">Dados para transferência:</p>
+              <p className="text-sm font-medium text-foreground">Dados para pagamento por referência:</p>
+
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">
+                  Vai ao Multicaixa, escolhe o menu <strong>Pagamentos → Pagamentos por Referência</strong>, escolhe a entidade <strong>UNITEL Money</strong> ou insere o código da entidade <strong>{PAYMENT_ENTITY}</strong>.
+                </p>
+              </div>
 
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-xs text-muted-foreground">IBAN</p>
-                  <p className="font-mono font-semibold text-foreground text-sm">{COMPANY_IBAN}</p>
+                  <p className="text-xs text-muted-foreground">Entidade</p>
+                  <p className="font-mono font-semibold text-foreground text-sm">{PAYMENT_ENTITY}</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(COMPANY_IBAN, 'IBAN')}>
-                  {copiedField === 'IBAN' ? <CheckCircle className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(PAYMENT_ENTITY, 'Entidade')}>
+                  {copiedField === 'Entidade' ? <CheckCircle className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-xs text-muted-foreground">Valor a transferir</p>
-                  <p className="font-mono font-bold text-primary text-sm">{finalPrice.toLocaleString()} KZ</p>
+                  <p className="text-xs text-muted-foreground">Referência de pagamento</p>
+                  <p className="font-mono font-semibold text-foreground text-sm">{PAYMENT_REFERENCE}</p>
                 </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="text-xs text-muted-foreground">Referência (incluir na transferência)</p>
-                  <p className="font-mono font-bold text-primary text-sm">{paymentRef}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(paymentRef, 'Referência')}>
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(PAYMENT_REFERENCE, 'Referência')}>
                   {copiedField === 'Referência' ? <CheckCircle className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
 
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-xs text-muted-foreground">Enviar comprovativo via WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">Valor a pagar</p>
+                  <p className="font-mono font-bold text-primary text-sm">{finalPrice.toLocaleString()} KZ</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Referência da plataforma</p>
+                  <p className="font-mono font-bold text-primary text-sm">{paymentRef}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => copyToClipboard(paymentRef, 'Ref. Plataforma')}>
+                  {copiedField === 'Ref. Plataforma' ? <CheckCircle className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div>
+                  <p className="text-xs text-muted-foreground">Enviar comprovativo via WhatsApp (apenas a referência da plataforma)</p>
                   <p className="font-semibold text-foreground text-sm">{COMPANY_WHATSAPP}</p>
                 </div>
                 <a
-                  href={`https://wa.me/244${COMPANY_WHATSAPP.replace(/\s/g, '')}?text=${encodeURIComponent(`Olá! Fiz a transferência para a zona "${zone.name}". Referência: ${paymentRef}. Valor: ${finalPrice} KZ${refCode ? `. Código de referência: ${refCode}` : ''}`)}`}
+                  href={`https://wa.me/244${COMPANY_WHATSAPP.replace(/\s/g, '')}?text=${encodeURIComponent(`Ref: ${paymentRef}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -259,7 +275,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
 
             <div className="bg-warning/10 rounded-lg p-3">
               <p className="text-xs text-warning font-medium">
-                ⚠️ Inclua a referência na descrição da transferência e envie o comprovativo por WhatsApp para ativar a sua subscrição.
+                ⚠️ Após o pagamento, envie o comprovativo por WhatsApp incluindo apenas a referência da plataforma para activar a sua subscrição.
               </p>
             </div>
 
