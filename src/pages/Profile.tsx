@@ -33,6 +33,8 @@ const Profile = () => {
         setTelefone(data.telefone || '');
         setProvincia(data.provincia || '');
         setCidade(data.cidade || '');
+        setIban((data as any).iban || '');
+        setIbanTitular((data as any).iban_titular || '');
       }
       setLoaded(true);
     });
