@@ -145,7 +145,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {step === 'pending' ? 'Subscrição Pendente' : `Subscrever ${zone.name}`}
