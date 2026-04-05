@@ -30,6 +30,8 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const redirectByRole = async (userId: string) => {
     const { data: rolesData } = await supabase
@@ -333,10 +335,52 @@ const Auth = () => {
             )}
 
             {/* Forgot password */}
-            {mode === 'login' && (
+            {mode === 'login' && !showForgot && (
               <div className="text-right">
-                <button type="button" className="text-sm text-primary hover:underline" onClick={() => toast({ title: 'Recuperação de senha', description: 'Funcionalidade em desenvolvimento. Contacte o suporte.' })}>
+                <button type="button" className="text-sm text-primary hover:underline" onClick={() => setShowForgot(true)}>
                   Esqueceu a senha?
+                </button>
+              </div>
+            )}
+
+            {mode === 'login' && showForgot && (
+              <div className="p-4 bg-muted/50 border border-border rounded-xl space-y-3">
+                <p className="text-sm text-foreground font-medium">Recuperar senha</p>
+                <p className="text-xs text-muted-foreground">
+                  {loginMethod === 'phone'
+                    ? 'Introduza o seu número de telefone para receber instruções de recuperação por email.'
+                    : 'Introduza o seu email para receber instruções de recuperação.'}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={forgotLoading || (loginMethod === 'phone' ? !validatePhone(telefone) : !validateEmail(email))}
+                  onClick={async () => {
+                    setForgotLoading(true);
+                    let resetEmail: string;
+                    if (loginMethod === 'email') {
+                      resetEmail = email;
+                    } else {
+                      const cleaned = telefone.replace(/\D/g, '');
+                      resetEmail = `${cleaned}@dinheiroemao.ao`;
+                    }
+                    await supabase.auth.resetPasswordForEmail(resetEmail, {
+                      redirectTo: `${window.location.origin}/reset-password`,
+                    });
+                    setForgotLoading(false);
+                    setShowForgot(false);
+                    toast({
+                      title: 'Verifique o seu email',
+                      description: 'Se a conta existir, receberá um email com instruções para redefinir a senha.',
+                    });
+                  }}
+                >
+                  {forgotLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Enviar link de recuperação'}
+                </Button>
+                <button type="button" onClick={() => setShowForgot(false)} className="text-xs text-muted-foreground hover:text-foreground w-full text-center">
+                  Cancelar
                 </button>
               </div>
             )}
