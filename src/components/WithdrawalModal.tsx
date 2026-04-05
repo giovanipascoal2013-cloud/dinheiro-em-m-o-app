@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Wallet, Loader2, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Wallet, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface WithdrawalModalProps {
   isOpen: boolean;
@@ -15,22 +16,34 @@ interface WithdrawalModalProps {
   onSuccess: () => void;
 }
 
-type Method = 'iban' | 'express';
 type Step = 'form' | 'processing' | 'success';
 
 export function WithdrawalModal({ isOpen, onClose, availableBalance, onSuccess }: WithdrawalModalProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<Step>('form');
-  const [method, setMethod] = useState<Method>('iban');
   const [amount, setAmount] = useState(availableBalance.toString());
-
-  // IBAN fields
   const [titular, setTitular] = useState('');
   const [iban, setIban] = useState('');
   const [banco, setBanco] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [hasProfileIban, setHasProfileIban] = useState(false);
 
-  // Express fields
-  const [telefone, setTelefone] = useState('');
+  useEffect(() => {
+    if (!isOpen || !user) return;
+    setAmount(availableBalance.toString());
+    supabase.from('profiles').select('iban, iban_titular').eq('user_id', user.id).single().then(({ data }) => {
+      const d = data as any;
+      if (d?.iban) {
+        setIban(d.iban);
+        setTitular(d.iban_titular || '');
+        setHasProfileIban(true);
+      } else {
+        setHasProfileIban(false);
+      }
+      setProfileLoaded(true);
+    });
+  }, [isOpen, user]);
 
   const handleClose = () => {
     if (step === 'success') onSuccess();
@@ -38,7 +51,7 @@ export function WithdrawalModal({ isOpen, onClose, availableBalance, onSuccess }
     setTitular('');
     setIban('');
     setBanco('');
-    setTelefone('');
+    setProfileLoaded(false);
     onClose();
   };
 
@@ -49,28 +62,19 @@ export function WithdrawalModal({ isOpen, onClose, availableBalance, onSuccess }
       toast({ title: 'Valor inválido', description: 'Insira um valor válido.', variant: 'destructive' });
       return;
     }
-
-    if (method === 'iban' && (!titular || !iban)) {
+    if (!titular || !iban) {
       toast({ title: 'Preencha os dados', description: 'Titular e IBAN são obrigatórios.', variant: 'destructive' });
-      return;
-    }
-    if (method === 'express' && !telefone) {
-      toast({ title: 'Preencha o telefone', variant: 'destructive' });
       return;
     }
 
     setStep('processing');
 
     try {
-      const bankDetails = method === 'iban'
-        ? { titular, iban, banco }
-        : { telefone };
-
       const { error } = await supabase.from('withdrawals').insert({
         agent_id: user.id,
         amount_kz: amountNum,
-        method,
-        bank_details: bankDetails,
+        method: 'iban',
+        bank_details: { titular, iban, banco },
         status: 'pending',
       });
 
@@ -101,68 +105,36 @@ export function WithdrawalModal({ isOpen, onClose, availableBalance, onSuccess }
               <p className="text-2xl font-bold text-success">{Math.round(availableBalance).toLocaleString()} KZ</p>
             </div>
 
-            <div className="space-y-2">
-              <Label>Valor a levantar (KZ)</Label>
-              <Input
-                type="number"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                max={availableBalance}
-                min={1}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Método de recebimento</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setMethod('iban')}
-                  className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                    method === 'iban' ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground'
-                  }`}
-                >
-                  Transferência IBAN
-                </button>
-                <button
-                  onClick={() => setMethod('express')}
-                  className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                    method === 'express' ? 'border-primary bg-primary/5 text-foreground' : 'border-border text-muted-foreground'
-                  }`}
-                >
-                  Multicaixa Express
-                </button>
-              </div>
-            </div>
-
-            {method === 'iban' ? (
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <Label>Nome do titular</Label>
-                  <Input value={titular} onChange={e => setTitular(e.target.value)} placeholder="Nome completo" />
-                </div>
-                <div className="space-y-1">
-                  <Label>IBAN</Label>
-                  <Input value={iban} onChange={e => setIban(e.target.value)} placeholder="AO06 ..." className="font-mono" />
-                </div>
-                <div className="space-y-1">
-                  <Label>Banco</Label>
-                  <Input value={banco} onChange={e => setBanco(e.target.value)} placeholder="Ex: BAI, BFA..." />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <Label>Número de telefone</Label>
-                <div className="flex">
-                  <div className="flex items-center px-3 border border-r-0 rounded-l-md bg-muted text-muted-foreground text-sm">+244</div>
-                  <Input
-                    value={telefone}
-                    onChange={e => setTelefone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                    placeholder="9XX XXX XXX"
-                    className="rounded-l-none"
-                  />
+            {profileLoaded && !hasProfileIban && (
+              <div className="flex items-start gap-2 bg-warning/10 border border-warning/30 rounded-lg p-3">
+                <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                <div className="text-sm">
+                  <p className="font-medium text-foreground">IBAN não configurado</p>
+                  <p className="text-muted-foreground">Configure o seu IBAN na página de perfil para pré-preencher automaticamente.</p>
+                  <button onClick={() => { handleClose(); navigate('/profile'); }} className="text-primary underline text-xs mt-1">Ir para o perfil</button>
                 </div>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label>Valor a levantar (KZ)</Label>
+              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} max={availableBalance} min={1} />
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Nome do titular</Label>
+                <Input value={titular} onChange={e => setTitular(e.target.value)} placeholder="Nome completo" />
+              </div>
+              <div className="space-y-1">
+                <Label>IBAN</Label>
+                <Input value={iban} onChange={e => setIban(e.target.value)} placeholder="AO06 ..." className="font-mono" />
+              </div>
+              <div className="space-y-1">
+                <Label>Banco (opcional)</Label>
+                <Input value={banco} onChange={e => setBanco(e.target.value)} placeholder="Ex: BAI, BFA..." />
+              </div>
+            </div>
 
             <Button variant="hero" size="lg" className="w-full" onClick={handleSubmit}>
               Levantar {Number(amount).toLocaleString()} KZ
