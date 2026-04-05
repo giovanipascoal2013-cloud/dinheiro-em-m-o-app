@@ -43,11 +43,16 @@ const Profile = () => {
   const handleSave = async () => {
     if (!user) return;
     setIsSaving(true);
-    const { error } = await supabase.from('profiles').update({
+    const updateData: Record<string, any> = {
       nome: nome.trim() || null,
       provincia: provincia || null,
       cidade: cidade.trim() || null,
-    }).eq('user_id', user.id);
+    };
+    if (isAgent) {
+      updateData.iban = iban.trim() || null;
+      updateData.iban_titular = ibanTitular.trim() || null;
+    }
+    const { error } = await supabase.from('profiles').update(updateData).eq('user_id', user.id);
 
     if (error) {
       toast({ title: 'Erro ao guardar', description: error.message, variant: 'destructive' });
