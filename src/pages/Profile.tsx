@@ -15,11 +15,13 @@ const PROVINCIAS_ANGOLA = [
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAgent } = useAuth();
   const [nome, setNome] = useState('');
   const [provincia, setProvincia] = useState('');
   const [cidade, setCidade] = useState('');
   const [telefone, setTelefone] = useState('');
+  const [iban, setIban] = useState('');
+  const [ibanTitular, setIbanTitular] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
