@@ -163,6 +163,8 @@ export type Database = {
         Row: {
           cidade: string | null
           created_at: string
+          iban: string | null
+          iban_titular: string | null
           id: string
           nome: string | null
           provincia: string | null
@@ -174,6 +176,8 @@ export type Database = {
         Insert: {
           cidade?: string | null
           created_at?: string
+          iban?: string | null
+          iban_titular?: string | null
           id?: string
           nome?: string | null
           provincia?: string | null
@@ -185,6 +189,8 @@ export type Database = {
         Update: {
           cidade?: string | null
           created_at?: string
+          iban?: string | null
+          iban_titular?: string | null
           id?: string
           nome?: string | null
           provincia?: string | null
