@@ -1,48 +1,36 @@
 
 
-## Plano: IBAN do agente no perfil + pré-preenchimento nos levantamentos
+## Plano: Implementar "Esqueceu a senha?"
 
 ### Resumo
-Adicionar campos `iban` e `iban_titular` à tabela `profiles` para que agentes registem os seus dados bancários no perfil. O modal de levantamento pré-preenche esses dados automaticamente. O dashboard de admin já mostra os dados via `bank_details` (sem alteração necessária).
+Substituir o toast placeholder por um fluxo completo de recuperação de senha com duas partes: envio do email de reset e página para definir nova senha.
 
-### 1. Migração de Base de Dados
+### 1. Página de Reset de Senha (`src/pages/ResetPassword.tsx`)
 
-Adicionar duas colunas à tabela `profiles`:
+- Página pública que verifica `type=recovery` no URL hash
+- Formulário com campo "Nova senha" e "Confirmar nova senha" (com toggle de visibilidade)
+- Chama `supabase.auth.updateUser({ password })` ao submeter
+- Após sucesso, redireciona para `/auth` com toast de confirmação
+- Se não houver token de recovery válido, mostra mensagem de erro com link para `/auth`
+- UI consistente com a página Auth (mesmo header com logo, footer, inputClasses)
 
-```sql
-ALTER TABLE public.profiles ADD COLUMN iban text;
-ALTER TABLE public.profiles ADD COLUMN iban_titular text;
-```
+### 2. Modificar Auth.tsx
 
-### 2. Página de Perfil (`src/pages/Profile.tsx`)
+- Substituir o `onClick` do botão "Esqueceu a senha?" para mostrar um mini-formulário inline (ou modal) que:
+  - Pede o email ou telefone (conforme o `loginMethod` activo)
+  - Se telefone: converte para `{phone}@dinheiroemao.ao`
+  - Chama `supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset-password' })`
+  - Mostra toast de sucesso: "Se a conta existir, receberá um email com instruções"
 
-- Importar `useAuth` para verificar `isAgent`
-- Adicionar estados `iban` e `ibanTitular`
-- Carregar e guardar esses campos no fetch/update do perfil
-- Renderizar secção condicional (apenas para agentes) com:
-  - Separador visual "Dados Bancários (Levantamentos)"
-  - Campo "Titular da conta" (texto, max 120 chars)
-  - Campo "IBAN" (texto, mono, placeholder `AO06 ...`, max 34 chars)
-  - Nota explicativa: "Estes dados serão usados nas suas solicitações de levantamento"
+### 3. Rota no App.tsx
 
-### 3. Modal de Levantamento (`src/components/WithdrawalModal.tsx`)
+- Adicionar `<Route path="/reset-password" element={<ResetPassword />} />` como rota pública
 
-- Ao abrir, fazer fetch do perfil do agente (`iban`, `iban_titular`)
-- Pré-preencher `titular` e `iban` com os dados do perfil
-- Se o agente não tiver IBAN cadastrado, mostrar aviso: "Configure o seu IBAN na página de perfil"
-- Remover a selecção de método (forçar sempre IBAN, já que é o requisito)
-  - **Alternativa**: manter Multicaixa Express como opção, mas pré-preencher apenas quando IBAN é seleccionado
-- Os campos continuam editáveis para correcções pontuais
-
-### 4. Sem alteração no Dashboard Admin
-
-O `Withdrawals.tsx` já lê `bank_details` do JSON gravado na tabela `withdrawals`. Como o modal já grava `{ titular, iban, banco }`, os dados do perfil fluem automaticamente para o admin.
-
-### Ficheiros a modificar
+### Ficheiros
 
 | Ficheiro | Alteração |
 |---|---|
-| Migração SQL | +2 colunas `iban`, `iban_titular` em `profiles` |
-| `src/pages/Profile.tsx` | Secção bancária condicional para agentes |
-| `src/components/WithdrawalModal.tsx` | Fetch perfil, pré-preencher IBAN/titular |
+| `src/pages/ResetPassword.tsx` | **Criar** — formulário de nova senha |
+| `src/pages/Auth.tsx` | Modificar — fluxo de recuperação no botão |
+| `src/App.tsx` | Modificar — adicionar rota `/reset-password` |
 
