@@ -129,6 +129,25 @@ const Profile = () => {
               </div>
             </div>
 
+            {isAgent && (
+              <>
+                <div className="border-t border-border/50 pt-4 mt-2">
+                  <h2 className="text-sm font-semibold text-foreground mb-3">Dados Bancários (Levantamentos)</h2>
+                  <p className="text-xs text-muted-foreground mb-3">Estes dados serão usados nas suas solicitações de levantamento.</p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">Titular da conta</label>
+                      <input type="text" value={ibanTitular} onChange={(e) => setIbanTitular(e.target.value)} placeholder="Nome completo do titular" maxLength={120} className={`${inputClasses} px-4`} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-1.5">IBAN</label>
+                      <input type="text" value={iban} onChange={(e) => setIban(e.target.value)} placeholder="AO06 ..." maxLength={34} className={`${inputClasses} px-4 font-mono`} />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
             <Button variant="hero" size="lg" className="w-full mt-2" onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-4 w-4 mr-2" />Guardar alterações</>}
             </Button>
