@@ -281,7 +281,7 @@ export default function UsersPage() {
           <div className="flex items-center gap-2 bg-muted rounded-lg p-3">
             <code className="flex-1 text-lg font-mono text-foreground tracking-wider">{tempPassword}</code>
             <Button variant="ghost" size="icon-sm" onClick={handleCopyPassword}>
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
           <DialogFooter>
