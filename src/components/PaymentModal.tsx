@@ -21,7 +21,8 @@ interface PaymentModalProps {
   initialRefCode?: string;
 }
 
-const COMPANY_IBAN = '0040 0000 1340 3139 1010 5';
+const PAYMENT_ENTITY = '00930';
+const PAYMENT_REFERENCE = '949 344 625';
 const COMPANY_WHATSAPP = '933 986 318';
 const REFERRAL_DISCOUNT = 0.3;
 
