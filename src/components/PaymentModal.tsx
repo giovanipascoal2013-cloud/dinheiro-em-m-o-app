@@ -97,7 +97,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
         user_id: user.id,
         zone_id: zone.id,
         amount_kz: finalPrice,
-        method: 'transferencia',
+        method: 'referencia',
         status: 'pending',
         payment_ref: paymentRef,
       }).select('id').single();
