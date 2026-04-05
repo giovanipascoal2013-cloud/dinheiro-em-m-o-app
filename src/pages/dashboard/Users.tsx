@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
-import { Search, Users, Shield, UserCog } from 'lucide-react';
+import { Search, Users, Shield, UserCog, KeyRound, Copy, Check } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 
 interface UserWithRoles {
   id: string;
@@ -19,13 +29,20 @@ export default function UsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Reset password state
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [tempPasswordDialogOpen, setTempPasswordDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithRoles | null>(null);
+  const [tempPassword, setTempPassword] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   useEffect(() => {
     fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
     try {
-      // Fetch all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -33,14 +50,12 @@ export default function UsersPage() {
 
       if (profilesError) throw profilesError;
 
-      // Fetch all user roles
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) throw rolesError;
 
-      // Map roles to users
       const usersWithRoles = (profiles || []).map(profile => ({
         ...profile,
         roles: (userRoles || [])
@@ -63,28 +78,57 @@ export default function UsersPage() {
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'destructive';
-      case 'supervisor':
-        return 'default';
-      case 'agent':
-        return 'secondary';
-      default:
-        return 'outline';
+      case 'admin': return 'destructive';
+      case 'supervisor': return 'default';
+      case 'agent': return 'secondary';
+      default: return 'outline';
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'Admin';
-      case 'supervisor':
-        return 'Supervisor';
-      case 'agent':
-        return 'Agente';
-      default:
-        return 'Utilizador';
+      case 'admin': return 'Admin';
+      case 'supervisor': return 'Supervisor';
+      case 'agent': return 'Agente';
+      default: return 'Utilizador';
     }
+  };
+
+  const handleResetClick = (user: UserWithRoles) => {
+    setSelectedUser(user);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmReset = async () => {
+    if (!selectedUser) return;
+    setIsResetting(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: selectedUser.user_id },
+      });
+
+      if (error) throw error;
+
+      setConfirmDialogOpen(false);
+
+      if (data.method === 'email') {
+        toast.success('Link de redefinição enviado para o email do utilizador.');
+      } else if (data.method === 'temporary') {
+        setTempPassword(data.tempPassword);
+        setTempPasswordDialogOpen(true);
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao redefinir a senha.');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  const handleCopyPassword = async () => {
+    await navigator.clipboard.writeText(tempPassword);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -169,33 +213,82 @@ export default function UsersPage() {
       ) : (
         <div className="bg-card rounded-xl shadow-card border border-border/50 divide-y divide-border">
           {filteredUsers.map(user => (
-            <div key={user.id} className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <div key={user.id} className="p-4 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                   <span className="text-primary font-semibold">
                     {user.nome?.charAt(0) || 'U'}
                   </span>
                 </div>
-                <div>
-                  <p className="font-medium text-foreground">{user.nome || 'Sem nome'}</p>
+                <div className="min-w-0">
+                  <p className="font-medium text-foreground truncate">{user.nome || 'Sem nome'}</p>
                   <p className="text-sm text-muted-foreground">{user.telefone}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 {user.roles.length > 0 ? (
                   user.roles.map(role => (
-                    <Badge key={role} variant={getRoleBadgeVariant(role)}>
+                    <Badge key={role} variant={getRoleBadgeVariant(role)} className="hidden sm:inline-flex">
                       {getRoleLabel(role)}
                     </Badge>
                   ))
                 ) : (
-                  <Badge variant="outline">Utilizador</Badge>
+                  <Badge variant="outline" className="hidden sm:inline-flex">Utilizador</Badge>
                 )}
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => handleResetClick(user)}
+                  title="Redefinir senha"
+                >
+                  <KeyRound className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {/* Confirm Reset Dialog */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+            <DialogDescription>
+              Tem a certeza que deseja redefinir a senha de <strong>{selectedUser?.nome || selectedUser?.telefone}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)} disabled={isResetting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmReset} disabled={isResetting}>
+              {isResetting ? 'A processar…' : 'Redefinir'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Temp Password Dialog */}
+      <Dialog open={tempPasswordDialogOpen} onOpenChange={setTempPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Senha temporária gerada</DialogTitle>
+            <DialogDescription>
+              Copie a senha abaixo e envie ao utilizador <strong>{selectedUser?.nome || selectedUser?.telefone}</strong> via WhatsApp. O utilizador deverá alterá-la após o primeiro login.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 bg-muted rounded-lg p-3">
+            <code className="flex-1 text-lg font-mono text-foreground tracking-wider">{tempPassword}</code>
+            <Button variant="ghost" size="icon-sm" onClick={handleCopyPassword}>
+              {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setTempPasswordDialogOpen(false)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }
