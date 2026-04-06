@@ -344,6 +344,72 @@ export default function FinanceDashboard() {
             <p className="text-xs text-muted-foreground">
               Exemplo: uma zona com 3 ATMs e sem preço manual custará <strong>{formatKz(Number(pricePerAtm) * 3)}</strong>/mês.
             </p>
+
+            {/* Platform Margin */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Margem da Plataforma</p>
+              {editingMargin ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={tempMargin} onChange={e => setTempMargin(e.target.value)} className="text-lg font-bold" min={0} max={100} />
+                    <span className="text-sm text-muted-foreground font-medium">%</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={savingSettings} onClick={async () => {
+                      const val = parseInt(tempMargin);
+                      if (isNaN(val) || val < 0 || val > 100) { toast({ title: 'Valor inválido (0-100)', variant: 'destructive' }); return; }
+                      setSavingSettings(true);
+                      const { error } = await supabase.from('platform_settings').update({ value: String(val / 100), updated_at: new Date().toISOString() }).eq('key', 'platform_margin');
+                      if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
+                      else { setPlatformMargin(val / 100); setEditingMargin(false); queryClient.invalidateQueries({ queryKey: ['platform_settings', 'margin'] }); toast({ title: 'Margem actualizada' }); }
+                      setSavingSettings(false);
+                    }}>
+                      {savingSettings ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      <span className="ml-1">Guardar</span>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingMargin(false); setTempMargin(String(Math.round(platformMargin * 100))); }}><X className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-bold text-foreground">{Math.round(platformMargin * 100)}%</p>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingMargin(true)}><Edit2 className="h-4 w-4" /></Button>
+                </div>
+              )}
+            </div>
+
+            {/* Referral Discount */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Desconto de Referência</p>
+              {editingDiscount ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={tempDiscount} onChange={e => setTempDiscount(e.target.value)} className="text-lg font-bold" min={0} max={100} />
+                    <span className="text-sm text-muted-foreground font-medium">%</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={savingSettings} onClick={async () => {
+                      const val = parseInt(tempDiscount);
+                      if (isNaN(val) || val < 0 || val > 100) { toast({ title: 'Valor inválido (0-100)', variant: 'destructive' }); return; }
+                      setSavingSettings(true);
+                      const { error } = await supabase.from('platform_settings').update({ value: String(val / 100), updated_at: new Date().toISOString() }).eq('key', 'referral_discount');
+                      if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
+                      else { setReferralDiscount(val / 100); setEditingDiscount(false); queryClient.invalidateQueries({ queryKey: ['platform_settings', 'margin'] }); toast({ title: 'Desconto actualizado' }); }
+                      setSavingSettings(false);
+                    }}>
+                      {savingSettings ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      <span className="ml-1">Guardar</span>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingDiscount(false); setTempDiscount(String(Math.round(referralDiscount * 100))); }}><X className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-bold text-foreground">{Math.round(referralDiscount * 100)}%</p>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingDiscount(true)}><Edit2 className="h-4 w-4" /></Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
