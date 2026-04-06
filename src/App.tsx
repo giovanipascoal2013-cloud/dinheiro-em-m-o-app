@@ -51,12 +51,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/dashboard/zones" element={
-              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'agent']}>
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
                 <ZonesPage />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/atms" element={
-              <ProtectedRoute requiredRoles={['admin', 'supervisor', 'agent']}>
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
                 <ATMsPage />
               </ProtectedRoute>
             } />
