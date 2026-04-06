@@ -1,37 +1,38 @@
 
 
-## Plano: Botão "Redefinir senha" na lista de utilizadores (Dashboard Admin)
+## Plano: Corrigir preço por ATM hardcoded (500) em todos os ficheiros
 
-### Resumo
-Adicionar um botão de acção em cada utilizador na página `/dashboard/users` que permite ao admin gerar e enviar um link de redefinição de senha. Para contas com email real, envia o link por email. Para contas telefone (`@dinheiroemao.ao`), gera uma senha temporária e mostra-a ao admin para comunicar ao utilizador.
+### Problema
+O financeiro definiu `price_per_atm = 100` na base de dados, mas vários ficheiros usam o valor `500` hardcoded em vez de consultar a configuração da plataforma. Isto afecta os preços exibidos no dashboard principal, no painel de zonas e nos cartões de zona.
 
-### Abordagem
+### Ficheiros com o problema
 
-Como o reset por email só funciona com emails reais, e contas telefone usam emails fictícios, são necessárias duas estratégias:
+| Ficheiro | Linha | Valor hardcoded |
+|---|---|---|
+| `src/pages/Dashboard.tsx` (RecentZonesList) | 303 | `zone.atm_count * 500` |
+| `src/pages/dashboard/Zones.tsx` (detail dialog) | 185 | `zoneDetail.atms.length * 500` |
+| `src/pages/dashboard/Zones.tsx` (ZoneCard) | 345 | `'Auto (500 KZ/ATM)'` |
 
-- **Conta com email real**: chamar `resetPasswordForEmail` via uma edge function com service role key
-- **Conta com telefone** (`*@dinheiroemao.ao`): chamar `admin.updateUserById` na edge function para definir uma nova senha temporária, e mostrá-la ao admin num dialog
+### Solução
 
-### 1. Edge Function `admin-reset-password`
+Usar o hook `usePricePerAtm` (já existe) em cada componente afectado para obter o valor dinâmico da tabela `platform_settings`.
 
-- Recebe `{ user_id }` no body
-- Verifica que quem chama é admin (via `has_role`)
-- Busca o email do utilizador via `admin.getUserById`
-- Se email **não** termina em `@dinheiroemao.ao`: chama `resetPasswordForEmail` → responde `{ method: 'email' }`
-- Se email termina em `@dinheiroemao.ao`: gera senha aleatória de 8 chars, chama `admin.updateUserById({ password })` → responde `{ method: 'temporary', tempPassword }`
+**1. `src/pages/Dashboard.tsx`**
+- Importar `usePricePerAtm`
+- No componente `RecentZonesList`, chamar `const { pricePerAtm } = usePricePerAtm();`
+- Linha 303: substituir `zone.atm_count * 500` por `zone.atm_count * pricePerAtm`
 
-### 2. Página Users.tsx
+**2. `src/pages/dashboard/Zones.tsx`**
+- Importar `usePricePerAtm`
+- No componente `ZonesPage`, chamar `const { pricePerAtm } = usePricePerAtm();`
+- Passar `pricePerAtm` ao `ZoneCard` como prop e ao cálculo do detail dialog
+- Linha 185: substituir `zoneDetail.atms.length * 500` por `zoneDetail.atms.length * pricePerAtm`
+- Linha 345: substituir `'Auto (500 KZ/ATM)'` por `` `Auto (${pricePerAtm} KZ/ATM)` ``
 
-- Adicionar botão `Key` (ícone) em cada linha de utilizador
-- Ao clicar, abre dialog de confirmação com o nome do utilizador
-- Ao confirmar, chama a edge function
-- Se resposta `method: 'email'`: toast "Link de redefinição enviado para o email do utilizador"
-- Se resposta `method: 'temporary'`: mostra dialog com a senha temporária para o admin copiar e enviar ao utilizador via WhatsApp
-
-### Ficheiros
+### Ficheiros a modificar
 
 | Ficheiro | Alteração |
 |---|---|
-| `supabase/functions/admin-reset-password/index.ts` | **Criar** — edge function |
-| `src/pages/dashboard/Users.tsx` | Adicionar botão + dialogs de reset |
+| `src/pages/Dashboard.tsx` | Usar `usePricePerAtm` no `RecentZonesList` |
+| `src/pages/dashboard/Zones.tsx` | Usar `usePricePerAtm` no `ZonesPage`, propagar ao card e detail |
 
