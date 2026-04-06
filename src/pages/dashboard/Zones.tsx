@@ -152,6 +152,7 @@ export default function ZonesPage() {
               onClick={() => openDetail(zone)}
               onToggleStatus={(e) => handleToggleStatus(zone, e)}
               canManage={isAdmin || isSupervisor}
+              pricePerAtm={pricePerAtm}
             />
           ))}
         </div>
