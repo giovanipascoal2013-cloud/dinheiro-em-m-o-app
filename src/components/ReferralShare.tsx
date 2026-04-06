@@ -3,6 +3,7 @@ import { Share2, Copy, CheckCircle, MessageCircle, Link as LinkIcon } from 'luci
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { usePlatformMargin } from '@/hooks/usePlatformMargin';
 
 interface ReferralShareProps {
   zoneName: string;
