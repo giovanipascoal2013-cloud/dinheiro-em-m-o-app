@@ -297,9 +297,9 @@ function MiniStat({ icon: Icon, label, value }: { icon: React.ComponentType<{ cl
   );
 }
 
-function ZoneCard({ zone, onEdit, onDelete, onClick, onToggleStatus, canManage }: { 
+function ZoneCard({ zone, onEdit, onDelete, onClick, onToggleStatus, canManage, pricePerAtm = 500 }: { 
   zone: Zone; onEdit: () => void; onDelete: () => void; onClick: () => void;
-  onToggleStatus: (e: React.MouseEvent) => void; canManage: boolean;
+  onToggleStatus: (e: React.MouseEvent) => void; canManage: boolean; pricePerAtm?: number;
 }) {
   return (
     <div onClick={onClick} className="bg-card rounded-xl p-4 shadow-card border border-border/50 hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5">
