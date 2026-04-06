@@ -120,10 +120,10 @@ export default function FinanceDashboard() {
       });
       const pagamentos = monthWd.reduce((sum, w) => sum + Number(w.amount_kz || 0), 0);
       
-      months.push({ month: label, receita, pagamentos, margem: receita * PLATFORM_MARGIN });
+      months.push({ month: label, receita, pagamentos, margem: receita * platformMargin });
     }
     return months;
-  }, [subscriptions, withdrawals]);
+  }, [subscriptions, withdrawals, platformMargin]);
 
   // Zone summary
   const zoneSummary = useMemo(() => {
