@@ -302,7 +302,7 @@ function RecentZonesList() {
   return (
     <div className="space-y-3">
       {zones.map(zone => {
-        const effectivePrice = zone.price_kz > 0 ? zone.price_kz : zone.atm_count * 500;
+        const effectivePrice = zone.price_kz > 0 ? zone.price_kz : zone.atm_count * pricePerAtm;
         return (
           <div 
             key={zone.id}
