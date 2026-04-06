@@ -32,8 +32,6 @@ interface ATM {
 interface SubscriptionAgg { zone_id: string; total: number; expired_amount: number; active_amount: number; }
 interface AgentZoneRef { zone_id: string; referral_code: string; }
 
-const AGENT_SHARE = 0.7;
-
 const AgentDashboard = () => {
   const { user, profile } = useAuth();
   const { pricePerAtm } = usePricePerAtm();
