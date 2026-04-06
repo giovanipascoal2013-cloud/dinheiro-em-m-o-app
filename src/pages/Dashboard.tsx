@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { Link } from 'react-router-dom';
 
 interface DashboardStats {
@@ -253,6 +254,7 @@ function StatCard({
 function RecentZonesList() {
   const [zones, setZones] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { pricePerAtm } = usePricePerAtm();
 
   useEffect(() => {
     const fetchZones = async () => {
@@ -300,7 +302,7 @@ function RecentZonesList() {
   return (
     <div className="space-y-3">
       {zones.map(zone => {
-        const effectivePrice = zone.price_kz > 0 ? zone.price_kz : zone.atm_count * 500;
+        const effectivePrice = zone.price_kz > 0 ? zone.price_kz : zone.atm_count * pricePerAtm;
         return (
           <div 
             key={zone.id}

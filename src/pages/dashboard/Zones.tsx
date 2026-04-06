@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MiniMap } from '@/components/MiniMap';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 
 interface Zone {
   id: string; name: string; description: string | null;
@@ -40,6 +41,7 @@ interface ZoneDetailData {
 
 export default function ZonesPage() {
   const { isAdmin, isSupervisor } = useAuth();
+  const { pricePerAtm } = usePricePerAtm();
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -150,6 +152,7 @@ export default function ZonesPage() {
               onClick={() => openDetail(zone)}
               onToggleStatus={(e) => handleToggleStatus(zone, e)}
               canManage={isAdmin || isSupervisor}
+              pricePerAtm={pricePerAtm}
             />
           ))}
         </div>
@@ -182,7 +185,7 @@ export default function ZonesPage() {
                 <span className="text-lg font-bold text-foreground">
                   {detailZone.price_kz > 0 
                     ? `${detailZone.price_kz.toLocaleString()} KZ` 
-                    : zoneDetail ? `${(zoneDetail.atms.length * 500).toLocaleString()} KZ (auto)` : 'A calcular'}
+                    : zoneDetail ? `${(zoneDetail.atms.length * pricePerAtm).toLocaleString()} KZ (auto)` : 'A calcular'}
                 </span>
               </div>
 
@@ -295,9 +298,9 @@ function MiniStat({ icon: Icon, label, value }: { icon: React.ComponentType<{ cl
   );
 }
 
-function ZoneCard({ zone, onEdit, onDelete, onClick, onToggleStatus, canManage }: { 
+function ZoneCard({ zone, onEdit, onDelete, onClick, onToggleStatus, canManage, pricePerAtm = 500 }: { 
   zone: Zone; onEdit: () => void; onDelete: () => void; onClick: () => void;
-  onToggleStatus: (e: React.MouseEvent) => void; canManage: boolean;
+  onToggleStatus: (e: React.MouseEvent) => void; canManage: boolean; pricePerAtm?: number;
 }) {
   return (
     <div onClick={onClick} className="bg-card rounded-xl p-4 shadow-card border border-border/50 hover:shadow-lg transition-all cursor-pointer hover:-translate-y-0.5">
@@ -342,7 +345,7 @@ function ZoneCard({ zone, onEdit, onDelete, onClick, onToggleStatus, canManage }
 
       <div className="flex items-center justify-between pt-2 border-t border-border">
         <span className="text-base font-bold text-foreground">
-          {zone.price_kz > 0 ? `${zone.price_kz.toLocaleString()} KZ` : 'Auto (500 KZ/ATM)'}
+          {zone.price_kz > 0 ? `${zone.price_kz.toLocaleString()} KZ` : `Auto (${pricePerAtm} KZ/ATM)`}
         </span>
       </div>
     </div>
