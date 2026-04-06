@@ -60,7 +60,7 @@ export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: Ref
           <div className="bg-secondary/50 rounded-xl p-3 sm:p-4">
             <p className="text-sm font-semibold text-foreground">{zoneName}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Quem subscrever pelo seu link recebe 30% de desconto e você ganha 30% de comissão!
+              Quem subscrever pelo seu link recebe {discountPct}% de desconto e você ganha {commissionPct}% de comissão!
             </p>
           </div>
 

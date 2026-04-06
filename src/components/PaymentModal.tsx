@@ -204,7 +204,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
               </div>
               {refValid === true && (
                 <p className="text-xs text-success flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" /> Código válido! 30% de desconto aplicado.
+                  <CheckCircle className="h-3 w-3" /> Código válido! {discountPct}% de desconto aplicado.
                 </p>
               )}
               {refValid === false && (
