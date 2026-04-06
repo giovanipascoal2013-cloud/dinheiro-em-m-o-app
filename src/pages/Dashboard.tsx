@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { Link } from 'react-router-dom';
 
 interface DashboardStats {
