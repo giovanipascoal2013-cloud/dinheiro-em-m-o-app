@@ -17,8 +17,6 @@ import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ComposedChart } from 'recharts';
 import { Link } from 'react-router-dom';
 
-const PLATFORM_MARGIN = 0.30;
-
 export default function FinanceDashboard() {
   const queryClient = useQueryClient();
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -32,6 +30,14 @@ export default function FinanceDashboard() {
   const [tempZonePrice, setTempZonePrice] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // Dynamic margin settings
+  const [platformMargin, setPlatformMargin] = useState(0.30);
+  const [referralDiscount, setReferralDiscount] = useState(0.30);
+  const [editingMargin, setEditingMargin] = useState(false);
+  const [tempMargin, setTempMargin] = useState('30');
+  const [editingDiscount, setEditingDiscount] = useState(false);
+  const [tempDiscount, setTempDiscount] = useState('30');
 
   useEffect(() => {
     fetchAll();
