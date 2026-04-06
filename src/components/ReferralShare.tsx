@@ -15,6 +15,9 @@ interface ReferralShareProps {
 export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: ReferralShareProps) {
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
+  const { referralDiscount, agentShare } = usePlatformMargin();
+  const discountPct = Math.round(referralDiscount * 100);
+  const commissionPct = Math.round(agentShare * 100);
 
   const baseUrl = window.location.origin;
   const referralUrl = `${baseUrl}/zone/${zoneId}?ref=${referralCode}`;
