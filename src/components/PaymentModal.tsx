@@ -165,7 +165,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
                     <span className="text-lg line-through text-muted-foreground">{zone.price_kz}</span>
                     <span className="text-3xl font-bold text-foreground">{finalPrice}</span>
                     <span className="text-muted-foreground">KZ</span>
-                    <span className="bg-success/10 text-success text-xs font-semibold px-2 py-0.5 rounded-full ml-2">-30%</span>
+                    <span className="bg-success/10 text-success text-xs font-semibold px-2 py-0.5 rounded-full ml-2">-{discountPct}%</span>
                   </>
                 ) : (
                   <>
