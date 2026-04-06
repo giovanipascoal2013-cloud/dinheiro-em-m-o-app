@@ -39,8 +39,10 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
   const [checkingRef, setCheckingRef] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { referralDiscount } = usePlatformMargin();
 
-  const discount = refValid ? Math.round(zone.price_kz * REFERRAL_DISCOUNT) : 0;
+  const discountPct = Math.round(referralDiscount * 100);
+  const discount = refValid ? Math.round(zone.price_kz * referralDiscount) : 0;
   const finalPrice = zone.price_kz - discount;
 
   useEffect(() => {
