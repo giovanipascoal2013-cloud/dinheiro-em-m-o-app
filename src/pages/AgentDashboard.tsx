@@ -123,9 +123,9 @@ const AgentDashboard = () => {
   };
 
   const totalSubscriptions = subscriptionAggs.reduce((sum, a) => sum + a.total, 0);
-  const grossAvailable = subscriptionAggs.reduce((sum, a) => sum + a.expired_amount, 0) * AGENT_SHARE;
+  const grossAvailable = subscriptionAggs.reduce((sum, a) => sum + a.expired_amount, 0) * agentShare;
   const availableBalance = Math.max(0, grossAvailable - totalWithdrawn);
-  const pendingBalance = subscriptionAggs.reduce((sum, a) => sum + a.active_amount, 0) * AGENT_SHARE;
+  const pendingBalance = subscriptionAggs.reduce((sum, a) => sum + a.active_amount, 0) * agentShare;
 
   if (loading) {
     return (

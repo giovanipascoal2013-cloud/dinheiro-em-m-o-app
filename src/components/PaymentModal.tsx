@@ -25,7 +25,6 @@ interface PaymentModalProps {
 const PAYMENT_ENTITY = '00930';
 const PAYMENT_REFERENCE = '949 344 625';
 const COMPANY_WHATSAPP = '933 986 318';
-const REFERRAL_DISCOUNT = 0.3;
 
 type Step = 'info' | 'processing' | 'pending' | 'error';
 
