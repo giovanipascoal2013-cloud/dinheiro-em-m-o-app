@@ -1,26 +1,19 @@
 
 
-## Plano: Restringir navegação do agente apenas ao seu painel de gestão
+## Plano: Tornar o popup de partilha de zona responsivo
 
 ### Problema
-Os agentes conseguem aceder às páginas `/dashboard/zones` e `/dashboard/atms` através da barra lateral, que mostram **todas** as zonas e ATMs da plataforma. O painel do agente (`/agent`) já filtra correctamente apenas as zonas atribuídas, mas a navegação lateral expõe links "Zonas" e "ATMs" sem restrição de cargo.
+O `DialogContent` no `ReferralShare.tsx` usa `sm:max-w-md` mas não tem adaptações para mobile (viewport 390px). O conteúdo pode transbordar e não há scroll interno. O link longo de referência pode quebrar o layout.
 
 ### Solução
 
-**1. `src/components/DashboardLayout.tsx`** — Restringir itens de navegação
+**Ficheiro: `src/components/ReferralShare.tsx`**
 
-- Adicionar `roles: ['admin', 'supervisor']` aos itens "Zonas" e "ATMs" na lista `navItems` (linhas 39-40), para que agentes não vejam esses links na barra lateral
+- Adicionar classes mobile ao `DialogContent`: `max-h-[85vh] overflow-y-auto mx-4 rounded-xl` para garantir scroll e margens em ecrãs pequenos
+- Reduzir padding interno em mobile: `p-4 sm:p-6`
+- No bloco do link de referência, adicionar `min-w-0` e `break-all` para que URLs longas não estourem o layout
+- Nos botões de partilha, mudar de `grid-cols-2` para `grid-cols-1 sm:grid-cols-2` em mobile para botões empilhados
+- Reduzir o tamanho do código de referência em mobile: `text-base sm:text-lg`
 
-**2. `src/App.tsx`** — Restringir rotas
-
-- Alterar `requiredRoles` das rotas `/dashboard/zones` e `/dashboard/atms` de `['admin', 'supervisor', 'agent']` para `['admin', 'supervisor']`, impedindo o acesso directo por URL
-
-Com estas duas alterações, o agente verá apenas "Meu Painel" na barra lateral, que é o seu painel de gestão operacional com as zonas e ATMs que lhe pertencem.
-
-### Ficheiros a modificar
-
-| Ficheiro | Alteração |
-|---|---|
-| `src/components/DashboardLayout.tsx` | Adicionar restrição de roles aos links Zonas e ATMs |
-| `src/App.tsx` | Remover `'agent'` das rotas `/dashboard/zones` e `/dashboard/atms` |
+Alteração simples, apenas um ficheiro.
 
