@@ -36,6 +36,7 @@ interface AgentZoneRef { zone_id: string; referral_code: string; }
 const AgentDashboard = () => {
   const { user, profile } = useAuth();
   const { pricePerAtm } = usePricePerAtm();
+  const { agentShare } = usePlatformMargin();
   const [zones, setZones] = useState<Zone[]>([]);
   const [atms, setAtms] = useState<ATM[]>([]);
   const [subscriptionAggs, setSubscriptionAggs] = useState<SubscriptionAgg[]>([]);
