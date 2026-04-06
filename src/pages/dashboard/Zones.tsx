@@ -184,7 +184,7 @@ export default function ZonesPage() {
                 <span className="text-lg font-bold text-foreground">
                   {detailZone.price_kz > 0 
                     ? `${detailZone.price_kz.toLocaleString()} KZ` 
-                    : zoneDetail ? `${(zoneDetail.atms.length * 500).toLocaleString()} KZ (auto)` : 'A calcular'}
+                    : zoneDetail ? `${(zoneDetail.atms.length * pricePerAtm).toLocaleString()} KZ (auto)` : 'A calcular'}
                 </span>
               </div>
 
