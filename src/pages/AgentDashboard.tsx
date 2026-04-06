@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { 
   MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const AGENT_SHARE = 0.7;
 
 const AgentDashboard = () => {
   const { user, profile } = useAuth();
+  const { pricePerAtm } = usePricePerAtm();
   const [zones, setZones] = useState<Zone[]>([]);
   const [atms, setAtms] = useState<ATM[]>([]);
   const [subscriptionAggs, setSubscriptionAggs] = useState<SubscriptionAgg[]>([]);
@@ -193,7 +195,7 @@ const AgentDashboard = () => {
                     </div>
                     <span className="text-xs text-muted-foreground">{zoneAgg?.total ?? 0} adesões</span>
                   </div>
-                  <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {(zone.price_kz > 0 ? zone.price_kz : zoneAtms.length * 500).toLocaleString()} KZ/mês</p>
+                  <p className="text-xs text-muted-foreground mb-3">{zoneAtms.length} ATMs · {(zone.price_kz > 0 ? zone.price_kz : zoneAtms.length * pricePerAtm).toLocaleString()} KZ/mês</p>
                   <div className="space-y-3">
                     {zoneAtms.map(atm => (
                       <ATMCard 
