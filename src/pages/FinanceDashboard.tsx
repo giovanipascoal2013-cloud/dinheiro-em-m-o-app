@@ -17,8 +17,6 @@ import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Line, ComposedChart } from 'recharts';
 import { Link } from 'react-router-dom';
 
-const PLATFORM_MARGIN = 0.30;
-
 export default function FinanceDashboard() {
   const queryClient = useQueryClient();
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
@@ -33,6 +31,14 @@ export default function FinanceDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [savingSettings, setSavingSettings] = useState(false);
 
+  // Dynamic margin settings
+  const [platformMargin, setPlatformMargin] = useState(0.30);
+  const [referralDiscount, setReferralDiscount] = useState(0.30);
+  const [editingMargin, setEditingMargin] = useState(false);
+  const [tempMargin, setTempMargin] = useState('30');
+  const [editingDiscount, setEditingDiscount] = useState(false);
+  const [tempDiscount, setTempDiscount] = useState('30');
+
   useEffect(() => {
     fetchAll();
   }, []);
@@ -43,15 +49,23 @@ export default function FinanceDashboard() {
       supabase.from('withdrawals').select('*'),
       supabase.from('zones').select('*'),
       supabase.from('atms').select('zone_id'),
-      supabase.from('platform_settings').select('*').eq('key', 'price_per_atm').maybeSingle(),
+      supabase.from('platform_settings').select('*').in('key', ['price_per_atm', 'platform_margin', 'referral_discount']),
     ]);
     setSubscriptions(subsRes.data || []);
     setWithdrawals(wdRes.data || []);
     setZones(zonesRes.data || []);
     setAtms(atmsRes.data || []);
-    const ppa = settingsRes.data?.value || '500';
+    const settingsMap: Record<string, string> = {};
+    (settingsRes.data || []).forEach((s: any) => { settingsMap[s.key] = s.value; });
+    const ppa = settingsMap['price_per_atm'] || '500';
     setPricePerAtm(ppa);
     setTempPricePerAtm(ppa);
+    const pm = Number(settingsMap['platform_margin']) || 0.30;
+    const rd = Number(settingsMap['referral_discount']) || 0.30;
+    setPlatformMargin(pm);
+    setReferralDiscount(rd);
+    setTempMargin(String(Math.round(pm * 100)));
+    setTempDiscount(String(Math.round(rd * 100)));
     setIsLoading(false);
   };
 
@@ -79,10 +93,10 @@ export default function FinanceDashboard() {
     const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending');
     const totalPending = pendingWithdrawals.reduce((sum, w) => sum + Number(w.amount_kz || 0), 0);
     
-    const platformMargin = totalRevenue * PLATFORM_MARGIN;
+    const platformMarginValue = totalRevenue * platformMargin;
 
-    return { totalRevenue, monthlyRevenue, totalPaid, totalPending, platformMargin };
-  }, [subscriptions, withdrawals]);
+    return { totalRevenue, monthlyRevenue, totalPaid, totalPending, platformMargin: platformMarginValue };
+  }, [subscriptions, withdrawals, platformMargin]);
 
   // Monthly chart data (last 6 months)
   const chartData = useMemo(() => {
@@ -106,10 +120,10 @@ export default function FinanceDashboard() {
       });
       const pagamentos = monthWd.reduce((sum, w) => sum + Number(w.amount_kz || 0), 0);
       
-      months.push({ month: label, receita, pagamentos, margem: receita * PLATFORM_MARGIN });
+      months.push({ month: label, receita, pagamentos, margem: receita * platformMargin });
     }
     return months;
-  }, [subscriptions, withdrawals]);
+  }, [subscriptions, withdrawals, platformMargin]);
 
   // Zone summary
   const zoneSummary = useMemo(() => {
@@ -124,14 +138,14 @@ export default function FinanceDashboard() {
         ...z,
         activeSubs: activeSubs.length,
         revenue,
-        margin: revenue * PLATFORM_MARGIN,
-        agentPayout: revenue * (1 - PLATFORM_MARGIN),
+        margin: revenue * platformMargin,
+        agentPayout: revenue * (1 - platformMargin),
         atmCount,
         effectivePrice,
         isManualPrice: Number(z.price_kz) > 0,
       };
     }).sort((a, b) => b.revenue - a.revenue);
-  }, [zones, subscriptions, atmCountMap, pricePerAtm]);
+  }, [zones, subscriptions, atmCountMap, pricePerAtm, platformMargin]);
 
   // Recent withdrawals
   const recentWithdrawals = useMemo(() => {
@@ -229,7 +243,7 @@ export default function FinanceDashboard() {
           { label: 'Receita Mensal', value: formatKz(kpis.monthlyRevenue), icon: TrendingUp, color: 'text-primary' },
           { label: 'Pago a Agentes', value: formatKz(kpis.totalPaid), icon: TrendingDown, color: 'text-amber-600' },
           { label: 'Pendente', value: formatKz(kpis.totalPending), icon: Wallet, color: 'text-destructive' },
-          { label: 'Margem (30%)', value: formatKz(kpis.platformMargin), icon: Percent, color: 'text-emerald-600' },
+          { label: `Margem (${Math.round(platformMargin * 100)}%)`, value: formatKz(kpis.platformMargin), icon: Percent, color: 'text-emerald-600' },
         ].map(kpi => (
           <Card key={kpi.label} className="border-border/50">
             <CardContent className="p-4">
@@ -330,6 +344,72 @@ export default function FinanceDashboard() {
             <p className="text-xs text-muted-foreground">
               Exemplo: uma zona com 3 ATMs e sem preço manual custará <strong>{formatKz(Number(pricePerAtm) * 3)}</strong>/mês.
             </p>
+
+            {/* Platform Margin */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Margem da Plataforma</p>
+              {editingMargin ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={tempMargin} onChange={e => setTempMargin(e.target.value)} className="text-lg font-bold" min={0} max={100} />
+                    <span className="text-sm text-muted-foreground font-medium">%</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={savingSettings} onClick={async () => {
+                      const val = parseInt(tempMargin);
+                      if (isNaN(val) || val < 0 || val > 100) { toast({ title: 'Valor inválido (0-100)', variant: 'destructive' }); return; }
+                      setSavingSettings(true);
+                      const { error } = await supabase.from('platform_settings').update({ value: String(val / 100), updated_at: new Date().toISOString() }).eq('key', 'platform_margin');
+                      if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
+                      else { setPlatformMargin(val / 100); setEditingMargin(false); queryClient.invalidateQueries({ queryKey: ['platform_settings', 'margin'] }); toast({ title: 'Margem actualizada' }); }
+                      setSavingSettings(false);
+                    }}>
+                      {savingSettings ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      <span className="ml-1">Guardar</span>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingMargin(false); setTempMargin(String(Math.round(platformMargin * 100))); }}><X className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-bold text-foreground">{Math.round(platformMargin * 100)}%</p>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingMargin(true)}><Edit2 className="h-4 w-4" /></Button>
+                </div>
+              )}
+            </div>
+
+            {/* Referral Discount */}
+            <div className="mt-4 pt-4 border-t border-border/50">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Desconto de Referência</p>
+              {editingDiscount ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Input type="number" value={tempDiscount} onChange={e => setTempDiscount(e.target.value)} className="text-lg font-bold" min={0} max={100} />
+                    <span className="text-sm text-muted-foreground font-medium">%</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" disabled={savingSettings} onClick={async () => {
+                      const val = parseInt(tempDiscount);
+                      if (isNaN(val) || val < 0 || val > 100) { toast({ title: 'Valor inválido (0-100)', variant: 'destructive' }); return; }
+                      setSavingSettings(true);
+                      const { error } = await supabase.from('platform_settings').update({ value: String(val / 100), updated_at: new Date().toISOString() }).eq('key', 'referral_discount');
+                      if (error) { toast({ title: 'Erro', description: error.message, variant: 'destructive' }); }
+                      else { setReferralDiscount(val / 100); setEditingDiscount(false); queryClient.invalidateQueries({ queryKey: ['platform_settings', 'margin'] }); toast({ title: 'Desconto actualizado' }); }
+                      setSavingSettings(false);
+                    }}>
+                      {savingSettings ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      <span className="ml-1">Guardar</span>
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => { setEditingDiscount(false); setTempDiscount(String(Math.round(referralDiscount * 100))); }}><X className="h-3 w-3" /></Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <p className="text-2xl font-bold text-foreground">{Math.round(referralDiscount * 100)}%</p>
+                  <Button size="icon" variant="ghost" onClick={() => setEditingDiscount(true)}><Edit2 className="h-4 w-4" /></Button>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

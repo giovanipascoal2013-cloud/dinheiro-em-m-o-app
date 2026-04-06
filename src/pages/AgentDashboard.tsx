@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePricePerAtm } from '@/hooks/usePricePerAtm';
+import { usePlatformMargin } from '@/hooks/usePlatformMargin';
 import { 
   MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
@@ -32,11 +33,10 @@ interface ATM {
 interface SubscriptionAgg { zone_id: string; total: number; expired_amount: number; active_amount: number; }
 interface AgentZoneRef { zone_id: string; referral_code: string; }
 
-const AGENT_SHARE = 0.7;
-
 const AgentDashboard = () => {
   const { user, profile } = useAuth();
   const { pricePerAtm } = usePricePerAtm();
+  const { agentShare } = usePlatformMargin();
   const [zones, setZones] = useState<Zone[]>([]);
   const [atms, setAtms] = useState<ATM[]>([]);
   const [subscriptionAggs, setSubscriptionAggs] = useState<SubscriptionAgg[]>([]);
@@ -123,9 +123,9 @@ const AgentDashboard = () => {
   };
 
   const totalSubscriptions = subscriptionAggs.reduce((sum, a) => sum + a.total, 0);
-  const grossAvailable = subscriptionAggs.reduce((sum, a) => sum + a.expired_amount, 0) * AGENT_SHARE;
+  const grossAvailable = subscriptionAggs.reduce((sum, a) => sum + a.expired_amount, 0) * agentShare;
   const availableBalance = Math.max(0, grossAvailable - totalWithdrawn);
-  const pendingBalance = subscriptionAggs.reduce((sum, a) => sum + a.active_amount, 0) * AGENT_SHARE;
+  const pendingBalance = subscriptionAggs.reduce((sum, a) => sum + a.active_amount, 0) * agentShare;
 
   if (loading) {
     return (

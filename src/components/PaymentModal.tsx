@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { usePlatformMargin } from '@/hooks/usePlatformMargin';
 
 interface PaymentZone {
   id: string;
@@ -24,7 +25,6 @@ interface PaymentModalProps {
 const PAYMENT_ENTITY = '00930';
 const PAYMENT_REFERENCE = '949 344 625';
 const COMPANY_WHATSAPP = '933 986 318';
-const REFERRAL_DISCOUNT = 0.3;
 
 type Step = 'info' | 'processing' | 'pending' | 'error';
 
@@ -39,8 +39,10 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
   const [checkingRef, setCheckingRef] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { referralDiscount } = usePlatformMargin();
 
-  const discount = refValid ? Math.round(zone.price_kz * REFERRAL_DISCOUNT) : 0;
+  const discountPct = Math.round(referralDiscount * 100);
+  const discount = refValid ? Math.round(zone.price_kz * referralDiscount) : 0;
   const finalPrice = zone.price_kz - discount;
 
   useEffect(() => {
@@ -163,7 +165,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
                     <span className="text-lg line-through text-muted-foreground">{zone.price_kz}</span>
                     <span className="text-3xl font-bold text-foreground">{finalPrice}</span>
                     <span className="text-muted-foreground">KZ</span>
-                    <span className="bg-success/10 text-success text-xs font-semibold px-2 py-0.5 rounded-full ml-2">-30%</span>
+                    <span className="bg-success/10 text-success text-xs font-semibold px-2 py-0.5 rounded-full ml-2">-{discountPct}%</span>
                   </>
                 ) : (
                   <>
@@ -202,7 +204,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
               </div>
               {refValid === true && (
                 <p className="text-xs text-success flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" /> Código válido! 30% de desconto aplicado.
+                  <CheckCircle className="h-3 w-3" /> Código válido! {discountPct}% de desconto aplicado.
                 </p>
               )}
               {refValid === false && (

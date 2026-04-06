@@ -3,6 +3,7 @@ import { Share2, Copy, CheckCircle, MessageCircle, Link as LinkIcon } from 'luci
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
+import { usePlatformMargin } from '@/hooks/usePlatformMargin';
 
 interface ReferralShareProps {
   zoneName: string;
@@ -14,11 +15,14 @@ interface ReferralShareProps {
 export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: ReferralShareProps) {
   const [copied, setCopied] = useState(false);
   const [open, setOpen] = useState(false);
+  const { referralDiscount, agentShare } = usePlatformMargin();
+  const discountPct = Math.round(referralDiscount * 100);
+  const commissionPct = Math.round(agentShare * 100);
 
   const baseUrl = window.location.origin;
   const referralUrl = `${baseUrl}/zone/${zoneId}?ref=${referralCode}`;
   
-  const shareText = `🏧 Encontre ATMs com dinheiro na zona "${zoneName}"!\n\nInformação em tempo real sobre ATMs verificados por agentes locais.\n\n👉 Subscreva com 30% de desconto usando o meu link:\n${referralUrl}\n\nCódigo: ${referralCode}\n\n— ${agentName}, Agente Dinheiro em Mão 🇦🇴`;
+  const shareText = `🏧 Encontre ATMs com dinheiro na zona "${zoneName}"!\n\nInformação em tempo real sobre ATMs verificados por agentes locais.\n\n👉 Subscreva com ${discountPct}% de desconto usando o meu link:\n${referralUrl}\n\nCódigo: ${referralCode}\n\n— ${agentName}, Agente Dinheiro em Mão 🇦🇴`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
@@ -56,7 +60,7 @@ export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: Ref
           <div className="bg-secondary/50 rounded-xl p-3 sm:p-4">
             <p className="text-sm font-semibold text-foreground">{zoneName}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Quem subscrever pelo seu link recebe 30% de desconto e você ganha 30% de comissão!
+              Quem subscrever pelo seu link recebe {discountPct}% de desconto e você ganha {commissionPct}% de comissão!
             </p>
           </div>
 
