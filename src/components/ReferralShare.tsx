@@ -48,12 +48,12 @@ export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: Ref
           Partilhar
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6 mx-4 sm:mx-auto rounded-xl">
         <DialogHeader>
           <DialogTitle>Partilhar zona</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="bg-secondary/50 rounded-xl p-4">
+        <div className="space-y-3 sm:space-y-4">
+          <div className="bg-secondary/50 rounded-xl p-3 sm:p-4">
             <p className="text-sm font-semibold text-foreground">{zoneName}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Quem subscrever pelo seu link recebe 30% de desconto e você ganha 30% de comissão!
@@ -62,27 +62,27 @@ export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: Ref
 
           {/* Referral code */}
           <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-muted-foreground">Código de referência</p>
-              <p className="font-mono font-bold text-primary text-lg">{referralCode}</p>
+              <p className="font-mono font-bold text-primary text-base sm:text-lg">{referralCode}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={copyCode}>
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={copyCode}>
               <Copy className="h-4 w-4" />
             </Button>
           </div>
 
           {/* Link */}
           <div className="flex items-center gap-2">
-            <div className="flex-1 bg-muted/50 rounded-lg p-3 overflow-hidden">
-              <p className="text-xs text-muted-foreground truncate font-mono">{referralUrl}</p>
+            <div className="flex-1 min-w-0 bg-muted/50 rounded-lg p-3 overflow-hidden">
+              <p className="text-xs text-muted-foreground font-mono break-all">{referralUrl}</p>
             </div>
-            <Button variant="ghost" size="icon" onClick={copyLink}>
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={copyLink}>
               {copied ? <CheckCircle className="h-4 w-4 text-success" /> : <LinkIcon className="h-4 w-4" />}
             </Button>
           </div>
 
           {/* Share buttons */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
             <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" className="w-full gap-2 text-success border-success/30 hover:bg-success/5">
                 <MessageCircle className="h-4 w-4" />
