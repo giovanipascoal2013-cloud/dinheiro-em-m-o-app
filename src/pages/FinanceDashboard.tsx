@@ -243,7 +243,7 @@ export default function FinanceDashboard() {
           { label: 'Receita Mensal', value: formatKz(kpis.monthlyRevenue), icon: TrendingUp, color: 'text-primary' },
           { label: 'Pago a Agentes', value: formatKz(kpis.totalPaid), icon: TrendingDown, color: 'text-amber-600' },
           { label: 'Pendente', value: formatKz(kpis.totalPending), icon: Wallet, color: 'text-destructive' },
-          { label: 'Margem (30%)', value: formatKz(kpis.platformMargin), icon: Percent, color: 'text-emerald-600' },
+          { label: `Margem (${Math.round(platformMargin * 100)}%)`, value: formatKz(kpis.platformMargin), icon: Percent, color: 'text-emerald-600' },
         ].map(kpi => (
           <Card key={kpi.label} className="border-border/50">
             <CardContent className="p-4">
