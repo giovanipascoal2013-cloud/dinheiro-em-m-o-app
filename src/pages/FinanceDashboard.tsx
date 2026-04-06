@@ -145,7 +145,7 @@ export default function FinanceDashboard() {
         isManualPrice: Number(z.price_kz) > 0,
       };
     }).sort((a, b) => b.revenue - a.revenue);
-  }, [zones, subscriptions, atmCountMap, pricePerAtm]);
+  }, [zones, subscriptions, atmCountMap, pricePerAtm, platformMargin]);
 
   // Recent withdrawals
   const recentWithdrawals = useMemo(() => {
