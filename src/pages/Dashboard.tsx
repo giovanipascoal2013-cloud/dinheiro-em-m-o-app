@@ -254,6 +254,7 @@ function StatCard({
 function RecentZonesList() {
   const [zones, setZones] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { pricePerAtm } = usePricePerAtm();
 
   useEffect(() => {
     const fetchZones = async () => {
