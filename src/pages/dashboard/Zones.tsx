@@ -41,6 +41,7 @@ interface ZoneDetailData {
 
 export default function ZonesPage() {
   const { isAdmin, isSupervisor } = useAuth();
+  const { pricePerAtm } = usePricePerAtm();
   const [zones, setZones] = useState<Zone[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
