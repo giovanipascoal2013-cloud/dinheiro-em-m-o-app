@@ -36,6 +36,7 @@ const AGENT_SHARE = 0.7;
 
 const AgentDashboard = () => {
   const { user, profile } = useAuth();
+  const { pricePerAtm } = usePricePerAtm();
   const [zones, setZones] = useState<Zone[]>([]);
   const [atms, setAtms] = useState<ATM[]>([]);
   const [subscriptionAggs, setSubscriptionAggs] = useState<SubscriptionAgg[]>([]);
