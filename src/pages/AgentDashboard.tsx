@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { 
   MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
