@@ -22,7 +22,7 @@ export function ReferralShare({ zoneName, zoneId, referralCode, agentName }: Ref
   const baseUrl = window.location.origin;
   const referralUrl = `${baseUrl}/zone/${zoneId}?ref=${referralCode}`;
   
-  const shareText = `🏧 Encontre ATMs com dinheiro na zona "${zoneName}"!\n\nInformação em tempo real sobre ATMs verificados por agentes locais.\n\n👉 Subscreva com 30% de desconto usando o meu link:\n${referralUrl}\n\nCódigo: ${referralCode}\n\n— ${agentName}, Agente Dinheiro em Mão 🇦🇴`;
+  const shareText = `🏧 Encontre ATMs com dinheiro na zona "${zoneName}"!\n\nInformação em tempo real sobre ATMs verificados por agentes locais.\n\n👉 Subscreva com ${discountPct}% de desconto usando o meu link:\n${referralUrl}\n\nCódigo: ${referralCode}\n\n— ${agentName}, Agente Dinheiro em Mão 🇦🇴`;
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
 
