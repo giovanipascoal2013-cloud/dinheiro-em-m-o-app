@@ -93,10 +93,10 @@ export default function FinanceDashboard() {
     const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending');
     const totalPending = pendingWithdrawals.reduce((sum, w) => sum + Number(w.amount_kz || 0), 0);
     
-    const platformMargin = totalRevenue * PLATFORM_MARGIN;
+    const platformMarginValue = totalRevenue * platformMargin;
 
-    return { totalRevenue, monthlyRevenue, totalPaid, totalPending, platformMargin };
-  }, [subscriptions, withdrawals]);
+    return { totalRevenue, monthlyRevenue, totalPaid, totalPending, platformMargin: platformMarginValue };
+  }, [subscriptions, withdrawals, platformMargin]);
 
   // Monthly chart data (last 6 months)
   const chartData = useMemo(() => {
