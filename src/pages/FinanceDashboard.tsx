@@ -49,15 +49,23 @@ export default function FinanceDashboard() {
       supabase.from('withdrawals').select('*'),
       supabase.from('zones').select('*'),
       supabase.from('atms').select('zone_id'),
-      supabase.from('platform_settings').select('*').eq('key', 'price_per_atm').maybeSingle(),
+      supabase.from('platform_settings').select('*').in('key', ['price_per_atm', 'platform_margin', 'referral_discount']),
     ]);
     setSubscriptions(subsRes.data || []);
     setWithdrawals(wdRes.data || []);
     setZones(zonesRes.data || []);
     setAtms(atmsRes.data || []);
-    const ppa = settingsRes.data?.value || '500';
+    const settingsMap: Record<string, string> = {};
+    (settingsRes.data || []).forEach((s: any) => { settingsMap[s.key] = s.value; });
+    const ppa = settingsMap['price_per_atm'] || '500';
     setPricePerAtm(ppa);
     setTempPricePerAtm(ppa);
+    const pm = Number(settingsMap['platform_margin']) || 0.30;
+    const rd = Number(settingsMap['referral_discount']) || 0.30;
+    setPlatformMargin(pm);
+    setReferralDiscount(rd);
+    setTempMargin(String(Math.round(pm * 100)));
+    setTempDiscount(String(Math.round(rd * 100)));
     setIsLoading(false);
   };
 
