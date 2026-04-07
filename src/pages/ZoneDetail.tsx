@@ -37,6 +37,11 @@ const ZoneDetail = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const { pricePerAtm, isLoadingPrice } = usePricePerAtm();
+  const [agentName, setAgentName] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [likes, setLikes] = useState(0);
+  const [dislikes, setDislikes] = useState(0);
+  const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
 
   useEffect(() => { if (id) { fetchZone(); } }, [id]);
   useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
