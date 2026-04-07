@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_activity_log: {
+        Row: {
+          action: string
+          agent_id: string
+          atm_id: string
+          created_at: string
+          id: string
+          zone_id: string
+        }
+        Insert: {
+          action?: string
+          agent_id: string
+          atm_id: string
+          created_at?: string
+          id?: string
+          zone_id: string
+        }
+        Update: {
+          action?: string
+          agent_id?: string
+          atm_id?: string
+          created_at?: string
+          id?: string
+          zone_id?: string
+        }
+        Relationships: []
+      }
+      agent_ratings: {
+        Row: {
+          agent_id: string
+          created_at: string
+          id: string
+          user_id: string
+          value: number
+          zone_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+          value: number
+          zone_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+          value?: number
+          zone_id?: string
+        }
+        Relationships: []
+      }
       agent_zones: {
         Row: {
           agent_id: string
