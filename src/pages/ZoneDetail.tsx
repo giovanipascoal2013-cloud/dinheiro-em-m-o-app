@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, FileText, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, FileText, AlertTriangle, User } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { PaymentModal } from '@/components/PaymentModal';
+import { RatingWidget } from '@/components/RatingWidget';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
