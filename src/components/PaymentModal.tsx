@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, CheckCircle, MessageCircle, Loader2, AlertCircle, Tag } from 'lucide-react';
+import { Copy, CheckCircle, MessageCircle, Loader2, AlertCircle, Tag, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
   const [refValid, setRefValid] = useState<boolean | null>(null);
   const [refAgentId, setRefAgentId] = useState<string | null>(null);
   const [checkingRef, setCheckingRef] = useState(false);
+  const [showRefInput, setShowRefInput] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
   const { referralDiscount } = usePlatformMargin();
@@ -47,13 +48,22 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
 
   useEffect(() => {
     if (isOpen) {
-      const ref = `DEM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      setPaymentRef(ref);
+      // Persist reference per zone in localStorage
+      const storageKey = `payment_ref_${zone.id}`;
+      const existingRef = localStorage.getItem(storageKey);
+      if (existingRef) {
+        setPaymentRef(existingRef);
+      } else {
+        const ref = `DEM-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        setPaymentRef(ref);
+        localStorage.setItem(storageKey, ref);
+      }
       setStep('info');
       setError(null);
       setRefCode(initialRefCode || '');
       setRefValid(null);
       setRefAgentId(null);
+      setShowRefInput(!!initialRefCode);
       if (initialRefCode) validateRefCode(initialRefCode);
     }
   }, [isOpen]);
@@ -86,19 +96,13 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
   };
 
   const handleConfirmPayment = async () => {
-    if (!user) {
-      setError('Por favor, faça login para continuar.');
-      setStep('error');
-      return;
-    }
-
     setStep('processing');
 
     // Check for existing pending subscription
     const { data: existingPending } = await supabase
       .from('subscriptions')
       .select('id')
-      .eq('user_id', user.id)
+      .eq('user_id', user!.id)
       .eq('zone_id', zone.id)
       .eq('status', 'pending')
       .maybeSingle();
@@ -111,7 +115,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
 
     try {
       const { data: txData, error: txError } = await supabase.from('transactions').insert({
-        user_id: user.id,
+        user_id: user!.id,
         zone_id: zone.id,
         amount_kz: finalPrice,
         method: 'referencia',
@@ -125,7 +129,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
       expiryDate.setMonth(expiryDate.getMonth() + 1);
 
       const { data: subData, error: subError } = await supabase.from('subscriptions').insert({
-        user_id: user.id,
+        user_id: user!.id,
         zone_id: zone.id,
         amount_kz: finalPrice,
         expiry_date: expiryDate.toISOString(),
@@ -144,6 +148,9 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
           subscription_id: subData.id,
         });
       }
+
+      // Clear persisted reference after successful submission
+      localStorage.removeItem(`payment_ref_${zone.id}`);
 
       setStep('pending');
     } catch (err: any) {
@@ -171,6 +178,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
 
         {step === 'info' && (
           <div className="space-y-5">
+            {/* 1. Zone summary + price */}
             <div className="bg-secondary/50 rounded-xl p-4">
               <h4 className="font-semibold text-foreground">{zone.name}</h4>
               <p className="text-sm text-muted-foreground mt-1">Acesso por 30 dias</p>
@@ -191,42 +199,7 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
               </div>
             </div>
 
-            {/* Referral code input */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5" />
-                Código de referência (opcional)
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  value={refCode}
-                  onChange={(e) => {
-                    setRefCode(e.target.value.toUpperCase());
-                    setRefValid(null);
-                  }}
-                  placeholder="Ex: AB12CD34"
-                  className="font-mono uppercase"
-                  maxLength={10}
-                />
-                <Button 
-                  variant="outline" 
-                  onClick={() => validateRefCode(refCode)}
-                  disabled={checkingRef || refCode.length < 3}
-                  className="shrink-0"
-                >
-                  {checkingRef ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Validar'}
-                </Button>
-              </div>
-              {refValid === true && (
-                <p className="text-xs text-success flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" /> Código válido! {discountPct}% de desconto aplicado.
-                </p>
-              )}
-              {refValid === false && (
-                <p className="text-xs text-destructive">Código inválido para esta zona.</p>
-              )}
-            </div>
-
+            {/* 2. Payment instructions */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-foreground">Dados para pagamento por referência:</p>
 
@@ -290,12 +263,60 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
               </div>
             </div>
 
-            <div className="bg-warning/10 rounded-lg p-3">
-              <p className="text-xs text-warning font-medium">
-                ⚠️ Após o pagamento, envie o comprovativo por WhatsApp incluindo apenas a referência da plataforma para activar a sua subscrição.
+            {/* 3. Critical warning */}
+            <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+              <p className="text-xs text-destructive font-semibold">
+                🚨 IMPORTANTE: Após o pagamento, volte aqui e clique no botão "Já paguei" abaixo. Se fechar esta janela sem clicar, a sua referência será mantida, mas deve reabrir e confirmar.
               </p>
             </div>
 
+            {/* 4. Referral code — hidden by default */}
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowRefInput(!showRefInput)}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Tag className="h-3.5 w-3.5" />
+                <span>Tem um código de desconto?</span>
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showRefInput ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showRefInput && (
+                <div className="space-y-2 mt-3">
+                  <div className="flex gap-2">
+                    <Input
+                      value={refCode}
+                      onChange={(e) => {
+                        setRefCode(e.target.value.toUpperCase());
+                        setRefValid(null);
+                      }}
+                      placeholder="Ex: AB12CD34"
+                      className="font-mono uppercase"
+                      maxLength={10}
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => validateRefCode(refCode)}
+                      disabled={checkingRef || refCode.length < 3}
+                      className="shrink-0"
+                    >
+                      {checkingRef ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Validar'}
+                    </Button>
+                  </div>
+                  {refValid === true && (
+                    <p className="text-xs text-success flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" /> Código válido! {discountPct}% de desconto aplicado.
+                    </p>
+                  )}
+                  {refValid === false && (
+                    <p className="text-xs text-destructive">Código inválido para esta zona.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 5. Confirm button */}
             <Button variant="hero" size="lg" className="w-full" onClick={handleConfirmPayment}>Já paguei</Button>
             <p className="text-xs text-muted-foreground text-center">A subscrição será ativada após verificação do pagamento.</p>
           </div>

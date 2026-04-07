@@ -226,7 +226,13 @@ const ZoneDetail = () => {
                 : <>Subscreva para ver o estado dos {atms.length} ATMs. Acesso mensal por apenas <strong>{effectivePrice} KZ</strong>.</>
               }
             </p>
-            <Button variant="hero" size="lg" className="w-full" onClick={() => setShowPaymentModal(true)} disabled={effectivePrice === 0 || subStatus === 'pending'}>
+            <Button variant="hero" size="lg" className="w-full" onClick={() => {
+              if (!user) {
+                navigate(`/auth?redirect=/zona/${id}`);
+                return;
+              }
+              setShowPaymentModal(true);
+            }} disabled={effectivePrice === 0 || subStatus === 'pending'}>
               {subStatus === 'pending' ? 'Aguardando aprovação...' : effectivePrice === 0 ? 'Preço ainda não definido' : `Subscrever por ${effectivePrice} KZ`}
             </Button>
             {subStatus !== 'pending' && <p className="text-xs text-muted-foreground mt-3">Pagamento seguro via Multicaixa Express</p>}
