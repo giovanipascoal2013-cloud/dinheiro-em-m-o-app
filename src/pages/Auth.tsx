@@ -34,6 +34,14 @@ const Auth = () => {
   const [forgotLoading, setForgotLoading] = useState(false);
 
   const redirectByRole = async (userId: string) => {
+    // Check for redirect param (e.g. from zone subscribe without login)
+    const searchParams = new URLSearchParams(window.location.search);
+    const redirectTo = searchParams.get('redirect');
+    if (redirectTo) {
+      navigate(redirectTo);
+      return;
+    }
+
     const { data: rolesData } = await supabase
       .from('user_roles')
       .select('role')
