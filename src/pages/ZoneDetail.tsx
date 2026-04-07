@@ -73,6 +73,61 @@ const ZoneDetail = () => {
     setSubStatus(pending ? 'pending' : 'none');
   };
 
+  const fetchAgent = async () => {
+    const { data: az } = await supabase
+      .from('agent_zones').select('agent_id').eq('zone_id', id!).maybeSingle();
+    if (!az) return;
+    setAgentId(az.agent_id);
+    const { data: profile } = await supabase
+      .from('profiles').select('nome').eq('user_id', az.agent_id).maybeSingle();
+    if (profile) setAgentName(profile.nome || 'Agente');
+  };
+
+  const fetchRatings = async () => {
+    const { data } = await supabase
+      .from('agent_ratings').select('value').eq('zone_id', id!);
+    if (data) {
+      setLikes(data.filter(r => r.value === 1).length);
+      setDislikes(data.filter(r => r.value === 0).length);
+    }
+  };
+
+  const fetchUserVote = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('agent_ratings').select('value').eq('zone_id', id!).eq('user_id', user.id).maybeSingle();
+    if (data) setUserVote(data.value === 1 ? 'like' : 'dislike');
+  };
+
+  const handleVote = async (value: 'like' | 'dislike') => {
+    if (!user || !agentId) return;
+    const numericValue = value === 'like' ? 1 : 0;
+    
+    // Upsert
+    const { error } = await supabase.from('agent_ratings').upsert({
+      user_id: user.id,
+      agent_id: agentId,
+      zone_id: id!,
+      value: numericValue,
+    }, { onConflict: 'user_id,zone_id' });
+
+    if (error) {
+      toast({ title: 'Erro ao votar', variant: 'destructive' });
+      return;
+    }
+    
+    // Update local state
+    const prevVote = userVote;
+    setUserVote(value);
+    if (prevVote === null) {
+      value === 'like' ? setLikes(l => l + 1) : setDislikes(d => d + 1);
+    } else if (prevVote !== value) {
+      if (value === 'like') { setLikes(l => l + 1); setDislikes(d => d - 1); }
+      else { setDislikes(d => d + 1); setLikes(l => l - 1); }
+    }
+    toast({ title: 'Obrigado pela sua avaliação!' });
+  };
+
   const handlePaymentSuccess = () => {
     setShowPaymentModal(false);
     toast({ title: 'Pagamento registado!', description: 'A sua subscrição será activada após aprovação do pagamento.' });
