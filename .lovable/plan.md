@@ -1,51 +1,97 @@
 
 
-## Plano: Corrigir fluxo de pagamento — 3 problemas de usabilidade
+## Plano: Sistema de Avaliação de Agentes + Painel de Análise
 
-### Problemas identificados
+### Contexto
+Utilizadores subscritos precisam avaliar a fiabilidade do agente que gere uma zona. Supervisores/admins precisam de um painel para analisar o desempenho dos agentes (qualidade de informação e frequência de actualização).
 
-1. **Referência muda ao reabrir o modal** — O utilizador paga, envia comprovativo pelo WhatsApp, fecha o modal sem clicar "Já paguei". Ao reabrir, gera-se uma nova referência diferente da enviada.
-2. **Login exigido só no fim** — O utilizador completa todo o processo de pagamento e só ao clicar "Já paguei" descobre que precisa de login.
-3. **Campo de código de referência distrai** — É o primeiro elemento interactivo, e utilizadores sem código não sabem o que preencher.
+### Parte 1 — Base de dados
 
-### Soluções
-
-**Problema 1 — Persistir a referência por zona**
-
-- Ao gerar a referência, guardar no `localStorage` com chave `payment_ref_{zoneId}`
-- Ao abrir o modal, verificar se já existe uma referência guardada para aquela zona; se sim, reutilizá-la em vez de gerar nova
-- Limpar do `localStorage` apenas após o clique em "Já paguei" (step `pending`)
-- Adicionar alerta visual: "⚠️ Não feche esta janela sem clicar em 'Já paguei' após efectuar o pagamento"
-
-**Problema 2 — Exigir login ANTES de abrir o modal**
-
-- No `ZoneDetail.tsx`, ao clicar no botão "Subscrever", verificar se `user` existe
-- Se não estiver logado, redirecionar para `/auth` com `redirectTo` de volta à zona (ex: `/auth?redirect=/zona/${id}`)
-- Assim o modal nunca abre sem sessão activa
-- Remover a verificação tardia de login dentro do `handleConfirmPayment` (já não será necessária)
-
-**Problema 3 — Esconder o campo de referência por defeito**
-
-- Mover o campo de código de referência para baixo (depois dos dados de pagamento, antes do botão "Já paguei")
-- Mostrar apenas um link/botão discreto: "Tem um código de desconto?"
-- Ao clicar, expande e mostra o input
-- Se `initialRefCode` vier preenchido (via URL), expandir automaticamente
-- Isto evita que utilizadores sem código fiquem confusos
-
-### Alteração de ordem no modal (de cima para baixo)
-
-```text
-1. Resumo da zona + preço
-2. Instruções de pagamento (Entidade, Referência, Valor, Ref. Plataforma, WhatsApp)
-3. ⚠️ Aviso: "NÃO feche sem clicar Já paguei"
-4. Link discreto "Tem um código de desconto?" → expande campo
-5. Botão "Já paguei"
+**Nova tabela `agent_ratings`:**
+```sql
+CREATE TABLE public.agent_ratings (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  agent_id uuid NOT NULL,
+  zone_id uuid NOT NULL,
+  value smallint NOT NULL CHECK (value IN (0, 1)), -- 0=dislike, 1=like
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, zone_id) -- 1 voto por zona por utilizador
+);
 ```
+- RLS: utilizadores autenticados podem inserir (para si), selecionar os seus votos, admins/supervisors podem ver todos
+- Sem limite de 24h nesta fase (simplificação) — apenas 1 voto por zona, actualizável
 
-### Ficheiros a modificar
+**Habilitar realtime** na tabela `atms` (para rastrear `last_updated` nos analytics).
+
+### Parte 2 — Widget de Avaliação na Zona (utilizador subscrito)
+
+**Ficheiro: `src/pages/ZoneDetail.tsx`**
+
+Após a lista de ATMs (apenas para `subStatus === 'active'`), adicionar secção discreta:
+- Mostrar o nome do agente responsável (consultar `agent_zones` + `profiles`)
+- Usar o `RatingWidget` existente com contagem de likes/dislikes do agente naquela zona
+- Consultar voto do utilizador actual em `agent_ratings`
+- Ao votar: upsert em `agent_ratings` (user_id, zone_id)
+- Texto: "Como avalia a fiabilidade das informações desta zona?"
+- Não intrusivo: aparece no fundo da lista de ATMs, com design subtil
+
+**Ficheiro: `src/components/RatingWidget.tsx`**
+- Ajustar variant `success` → verificar se existe no Button, senão usar classe custom
+- Componente já está pronto, apenas precisa de integração
+
+### Parte 3 — Painel de Análise de Agentes (admin/supervisor)
+
+**Novo ficheiro: `src/pages/dashboard/AgentAnalytics.tsx`**
+
+Painel acessível via sidebar, que mostra para cada agente:
+
+1. **Score de reputação** — (likes / total votos) × 5, arredondado a 1 casa
+2. **Total likes / dislikes** — agregado de todas as zonas
+3. **Frequência de actualização** — conta quantas vezes o agente actualizou ATMs nos últimos 7/30 dias (via `atms.last_updated` cruzado com `agent_zones`)
+4. **Última actualização** — timestamp da última alteração feita pelo agente
+5. **Zonas geridas** — lista com score individual por zona
+6. **Alerta** — se score < 2.5, badge de aviso
+
+Layout: tabela/lista com cards expansíveis por agente. Filtro por nome, zona, score.
+
+**Ficheiro: `src/components/DashboardLayout.tsx`**
+- Adicionar link "Análise Agentes" com ícone `BarChart3`, roles: `['admin', 'supervisor']`
+
+**Ficheiro: `src/App.tsx`**
+- Nova rota `/dashboard/agent-analytics` protegida para admin/supervisor
+
+### Parte 4 — Tracking de actividade do agente
+
+Para calcular a frequência de actualizações, vamos usar os timestamps `last_updated` da tabela `atms`. Quando o agente actualiza um ATM, o `last_updated` é definido — cruzando com `agent_zones` sabemos quais ATMs pertencem a zonas do agente.
+
+Adicionalmente, criar uma **tabela `agent_activity_log`** para registo mais granular:
+```sql
+CREATE TABLE public.agent_activity_log (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  agent_id uuid NOT NULL,
+  atm_id uuid NOT NULL,
+  zone_id uuid NOT NULL,
+  action text NOT NULL DEFAULT 'update',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+```
+- RLS: agentes inserem os seus, admins/supervisors lêem todos
+- Inserir um registo cada vez que o agente actualiza um ATM (no `AgentDashboard.tsx`, dentro de `handleUpdateAtm`)
+
+### Ficheiros a criar/modificar
 
 | Ficheiro | Alteração |
 |---|---|
-| `src/components/PaymentModal.tsx` | Persistir ref no localStorage; reordenar layout; esconder campo referência; melhorar avisos |
-| `src/pages/ZoneDetail.tsx` | Bloquear abertura do modal sem login; redirecionar para `/auth?redirect=...` |
+| BD (migration) | Criar `agent_ratings` e `agent_activity_log` com RLS |
+| `src/pages/ZoneDetail.tsx` | Adicionar widget de avaliação para subscritos |
+| `src/pages/dashboard/AgentAnalytics.tsx` | **Criar** — painel de análise |
+| `src/pages/AgentDashboard.tsx` | Registar actividade no log ao actualizar ATM |
+| `src/components/DashboardLayout.tsx` | Adicionar link na sidebar |
+| `src/App.tsx` | Adicionar rota protegida |
+
+### Notas de design
+- Widget de avaliação é discreto: aparece abaixo dos ATMs, sem popup
+- Painel de analytics usa cards com métricas visuais (barras de progresso, badges coloridos)
+- Alerta vermelho automático se score de agente cai abaixo de 2.5
 
