@@ -94,6 +94,21 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
 
     setStep('processing');
 
+    // Check for existing pending subscription
+    const { data: existingPending } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('zone_id', zone.id)
+      .eq('status', 'pending')
+      .maybeSingle();
+
+    if (existingPending) {
+      setError('Já tem uma subscrição pendente para esta zona. Aguarde a aprovação ou contacte o suporte.');
+      setStep('error');
+      return;
+    }
+
     try {
       const { data: txData, error: txError } = await supabase.from('transactions').insert({
         user_id: user.id,
