@@ -113,6 +113,17 @@ const AgentDashboard = () => {
     } else {
       setAtms(prev => prev.map(a => a.id === atmId ? { ...a, ...updates, last_updated: new Date().toISOString() } : a));
       toast({ title: 'ATM atualizado' });
+      
+      // Log activity
+      const atm = atms.find(a => a.id === atmId);
+      if (atm && user) {
+        supabase.from('agent_activity_log').insert({
+          agent_id: user.id,
+          atm_id: atmId,
+          zone_id: atm.zone_id,
+          action: 'update',
+        }).then(() => {});
+      }
     }
     setUpdatingAtm(null);
   };

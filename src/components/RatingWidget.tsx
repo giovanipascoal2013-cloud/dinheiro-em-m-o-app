@@ -41,7 +41,7 @@ export function RatingWidget({
         disabled={disabled || isVoting}
         className={cn(
           "gap-2 min-w-[80px]",
-          userVote === 'like' && "shadow-md"
+          userVote === 'like' && "bg-success text-success-foreground hover:bg-success/90 shadow-md"
         )}
       >
         <ThumbsUp className={cn(

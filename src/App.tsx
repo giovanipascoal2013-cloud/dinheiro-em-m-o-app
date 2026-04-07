@@ -86,6 +86,11 @@ const App = () => (
                 <RolesPage />
               </ProtectedRoute>
             } />
+            <Route path="/dashboard/agent-analytics" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+                <AgentAnalytics />
+              </ProtectedRoute>
+            } />
             <Route path="/dashboard/users" element={
               <ProtectedRoute requiredRoles={['admin']}>
                 <UsersPage />

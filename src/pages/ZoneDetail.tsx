@@ -272,6 +272,26 @@ const ZoneDetail = () => {
                 <p className="text-center text-muted-foreground py-8">Nenhum ATM registado nesta zona.</p>
               )}
             </div>
+
+            {/* Rating widget */}
+            {agentName && (
+              <div className="mt-6 bg-card rounded-xl p-4 border border-border/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-foreground">
+                    <span className="text-muted-foreground">Agente responsável: </span>
+                    <span className="font-medium">{agentName}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Como avalia a fiabilidade das informações desta zona?</p>
+                <RatingWidget
+                  likes={likes}
+                  dislikes={dislikes}
+                  userVote={userVote}
+                  onVote={handleVote}
+                />
+              </div>
+            )}
           </section>
         ) : (
           <div className="bg-card rounded-2xl p-6 text-center shadow-card border border-border/50 max-w-md mx-auto">
