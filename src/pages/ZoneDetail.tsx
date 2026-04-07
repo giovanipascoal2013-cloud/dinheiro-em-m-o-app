@@ -124,8 +124,10 @@ const ZoneDetail = () => {
                 </div>
               )}
             </div>
-            {isSubscribed ? (
+            {subStatus === 'active' ? (
               <div className="bg-success/10 text-success text-xs font-medium px-3 py-1.5 rounded-full shrink-0">Subscrito</div>
+            ) : subStatus === 'pending' ? (
+              <div className="bg-warning/10 text-warning text-xs font-medium px-3 py-1.5 rounded-full shrink-0">Pendente</div>
             ) : (
               <div className="bg-muted text-muted-foreground p-2 rounded-lg shrink-0">
                 <Lock className="h-4 w-4" />
