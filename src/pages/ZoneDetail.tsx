@@ -214,18 +214,22 @@ const ZoneDetail = () => {
           </section>
         ) : (
           <div className="bg-card rounded-2xl p-6 text-center shadow-card border border-border/50 max-w-md mx-auto">
-            <div className="bg-primary/10 p-3 rounded-full w-fit mx-auto mb-4">
-              <Lock className="h-6 w-6 text-primary" />
+            <div className={cn("p-3 rounded-full w-fit mx-auto mb-4", subStatus === 'pending' ? "bg-warning/10" : "bg-primary/10")}>
+              {subStatus === 'pending' ? <Clock className="h-6 w-6 text-warning" /> : <Lock className="h-6 w-6 text-primary" />}
             </div>
-            <h2 className="text-lg font-bold text-foreground mb-2">Acesso à Zona Bloqueado</h2>
+            <h2 className="text-lg font-bold text-foreground mb-2">
+              {subStatus === 'pending' ? 'Subscrição Pendente' : 'Acesso à Zona Bloqueado'}
+            </h2>
             <p className="text-muted-foreground text-sm mb-5">
-              Subscreva para ver o estado dos {atms.length} ATMs.
-              Acesso mensal por apenas <strong>{effectivePrice} KZ</strong>.
+              {subStatus === 'pending'
+                ? 'O seu pagamento está a ser verificado. A subscrição será activada após aprovação.'
+                : <>Subscreva para ver o estado dos {atms.length} ATMs. Acesso mensal por apenas <strong>{effectivePrice} KZ</strong>.</>
+              }
             </p>
-            <Button variant="hero" size="lg" className="w-full" onClick={() => setShowPaymentModal(true)} disabled={effectivePrice === 0}>
-              {effectivePrice === 0 ? 'Preço ainda não definido' : `Subscrever por ${effectivePrice} KZ`}
+            <Button variant="hero" size="lg" className="w-full" onClick={() => setShowPaymentModal(true)} disabled={effectivePrice === 0 || subStatus === 'pending'}>
+              {subStatus === 'pending' ? 'Aguardando aprovação...' : effectivePrice === 0 ? 'Preço ainda não definido' : `Subscrever por ${effectivePrice} KZ`}
             </Button>
-            <p className="text-xs text-muted-foreground mt-3">Pagamento seguro via Multicaixa Express</p>
+            {subStatus !== 'pending' && <p className="text-xs text-muted-foreground mt-3">Pagamento seguro via Multicaixa Express</p>}
           </div>
         )}
       </main>
