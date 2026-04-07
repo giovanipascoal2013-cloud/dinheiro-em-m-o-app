@@ -51,12 +51,20 @@ const ZoneDetail = () => {
   };
 
   const checkSubscription = async () => {
-    const { data } = await supabase
+    // Check active first
+    const { data: active } = await supabase
       .from('subscriptions').select('id')
       .eq('user_id', user!.id).eq('zone_id', id!)
       .eq('status', 'active').gte('expiry_date', new Date().toISOString())
       .maybeSingle();
-    setIsSubscribed(!!data);
+    if (active) { setSubStatus('active'); return; }
+    // Check pending
+    const { data: pending } = await supabase
+      .from('subscriptions').select('id')
+      .eq('user_id', user!.id).eq('zone_id', id!)
+      .eq('status', 'pending')
+      .maybeSingle();
+    setSubStatus(pending ? 'pending' : 'none');
   };
 
   const handlePaymentSuccess = () => {
