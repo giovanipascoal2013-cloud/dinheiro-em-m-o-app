@@ -43,8 +43,8 @@ const ZoneDetail = () => {
   const [dislikes, setDislikes] = useState(0);
   const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
 
-  useEffect(() => { if (id) { fetchZone(); } }, [id]);
-  useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
+  useEffect(() => { if (id) { fetchZone(); fetchAgent(); fetchRatings(); } }, [id]);
+  useEffect(() => { if (id && user) { checkSubscription(); fetchUserVote(); } }, [id, user]);
 
   const fetchZone = async () => {
     const [zoneRes, atmsRes] = await Promise.all([
