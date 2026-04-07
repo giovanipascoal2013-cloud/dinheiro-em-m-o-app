@@ -12,7 +12,8 @@ import {
   ClipboardCheck,
   Wallet,
   ArrowLeftRight,
-  TrendingUp
+  TrendingUp,
+  BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,6 +43,7 @@ const navItems: NavItem[] = [
   { label: 'Subscrições', href: '/dashboard/subscriptions', icon: ClipboardCheck, roles: ['admin', 'supervisor', 'financeiro'] },
   { label: 'Levantamentos', href: '/dashboard/withdrawals', icon: Wallet, roles: ['admin', 'supervisor', 'financeiro'] },
   { label: 'Agentes', href: '/dashboard/agents', icon: Users, roles: ['admin', 'supervisor'] },
+  { label: 'Análise Agentes', href: '/dashboard/agent-analytics', icon: BarChart3, roles: ['admin', 'supervisor'] },
   { label: 'Utilizadores', href: '/dashboard/users', icon: UserCog, roles: ['admin'] },
   { label: 'Roles', href: '/dashboard/roles', icon: Shield, roles: ['admin'] },
 ];

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, FileText, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, Lock, Banknote, Clock, CheckCircle2, XCircle, FileText, AlertTriangle, User } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { PaymentModal } from '@/components/PaymentModal';
+import { RatingWidget } from '@/components/RatingWidget';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { format, formatDistanceToNow } from 'date-fns';
@@ -36,9 +37,14 @@ const ZoneDetail = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const { pricePerAtm, isLoadingPrice } = usePricePerAtm();
+  const [agentName, setAgentName] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string | null>(null);
+  const [likes, setLikes] = useState(0);
+  const [dislikes, setDislikes] = useState(0);
+  const [userVote, setUserVote] = useState<'like' | 'dislike' | null>(null);
 
-  useEffect(() => { if (id) { fetchZone(); } }, [id]);
-  useEffect(() => { if (id && user) checkSubscription(); }, [id, user]);
+  useEffect(() => { if (id) { fetchZone(); fetchAgent(); fetchRatings(); } }, [id]);
+  useEffect(() => { if (id && user) { checkSubscription(); fetchUserVote(); } }, [id, user]);
 
   const fetchZone = async () => {
     const [zoneRes, atmsRes] = await Promise.all([
@@ -65,6 +71,61 @@ const ZoneDetail = () => {
       .eq('status', 'pending')
       .maybeSingle();
     setSubStatus(pending ? 'pending' : 'none');
+  };
+
+  const fetchAgent = async () => {
+    const { data: az } = await supabase
+      .from('agent_zones').select('agent_id').eq('zone_id', id!).maybeSingle();
+    if (!az) return;
+    setAgentId(az.agent_id);
+    const { data: profile } = await supabase
+      .from('profiles').select('nome').eq('user_id', az.agent_id).maybeSingle();
+    if (profile) setAgentName(profile.nome || 'Agente');
+  };
+
+  const fetchRatings = async () => {
+    const { data } = await supabase
+      .from('agent_ratings').select('value').eq('zone_id', id!);
+    if (data) {
+      setLikes(data.filter(r => r.value === 1).length);
+      setDislikes(data.filter(r => r.value === 0).length);
+    }
+  };
+
+  const fetchUserVote = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('agent_ratings').select('value').eq('zone_id', id!).eq('user_id', user.id).maybeSingle();
+    if (data) setUserVote(data.value === 1 ? 'like' : 'dislike');
+  };
+
+  const handleVote = async (value: 'like' | 'dislike') => {
+    if (!user || !agentId) return;
+    const numericValue = value === 'like' ? 1 : 0;
+    
+    // Upsert
+    const { error } = await supabase.from('agent_ratings').upsert({
+      user_id: user.id,
+      agent_id: agentId,
+      zone_id: id!,
+      value: numericValue,
+    }, { onConflict: 'user_id,zone_id' });
+
+    if (error) {
+      toast({ title: 'Erro ao votar', variant: 'destructive' });
+      return;
+    }
+    
+    // Update local state
+    const prevVote = userVote;
+    setUserVote(value);
+    if (prevVote === null) {
+      value === 'like' ? setLikes(l => l + 1) : setDislikes(d => d + 1);
+    } else if (prevVote !== value) {
+      if (value === 'like') { setLikes(l => l + 1); setDislikes(d => d - 1); }
+      else { setDislikes(d => d + 1); setLikes(l => l - 1); }
+    }
+    toast({ title: 'Obrigado pela sua avaliação!' });
   };
 
   const handlePaymentSuccess = () => {
@@ -211,6 +272,26 @@ const ZoneDetail = () => {
                 <p className="text-center text-muted-foreground py-8">Nenhum ATM registado nesta zona.</p>
               )}
             </div>
+
+            {/* Rating widget */}
+            {agentName && (
+              <div className="mt-6 bg-card rounded-xl p-4 border border-border/50">
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-foreground">
+                    <span className="text-muted-foreground">Agente responsável: </span>
+                    <span className="font-medium">{agentName}</span>
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Como avalia a fiabilidade das informações desta zona?</p>
+                <RatingWidget
+                  likes={likes}
+                  dislikes={dislikes}
+                  userVote={userVote}
+                  onVote={handleVote}
+                />
+              </div>
+            )}
           </section>
         ) : (
           <div className="bg-card rounded-2xl p-6 text-center shadow-card border border-border/50 max-w-md mx-auto">
