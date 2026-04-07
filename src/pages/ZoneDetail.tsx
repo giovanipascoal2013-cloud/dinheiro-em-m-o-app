@@ -158,7 +158,7 @@ const ZoneDetail = () => {
 
       {/* Content */}
       <main className="container mx-auto px-4 pb-8">
-        {isSubscribed ? (
+        {subStatus === 'active' ? (
           <section>
             <h2 className="text-base font-semibold text-foreground mb-3">ATMs na zona ({atms.length})</h2>
             <div className="space-y-3">
