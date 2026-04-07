@@ -35,7 +35,7 @@ export function RatingWidget({
     <div className="flex items-center gap-4">
       {/* Like button */}
       <Button
-        variant={userVote === 'like' ? 'success' : 'outline'}
+        variant={userVote === 'like' ? 'default' : 'outline'}
         size="sm"
         onClick={() => handleVote('like')}
         disabled={disabled || isVoting}
