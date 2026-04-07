@@ -32,7 +32,7 @@ const ZoneDetail = () => {
   const navigate = useNavigate();
   const [zone, setZone] = useState<DBZone | null>(null);
   const [atms, setAtms] = useState<DBAtm[]>([]);
-  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subStatus, setSubStatus] = useState<'none' | 'active' | 'pending'>('none');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const { pricePerAtm, isLoadingPrice } = usePricePerAtm();
