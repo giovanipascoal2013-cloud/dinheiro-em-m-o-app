@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import { usePlatformMargin } from '@/hooks/usePlatformMargin';
 import { 
+  MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff,
+  HandCoins, Link2, Star, CreditCard, TrendingUp
+} from 'lucide-react';
+import { OnboardingGuide, OnboardingStep } from '@/components/OnboardingGuide';
+import { usePlatformMargin } from '@/hooks/usePlatformMargin';
+import { 
   MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -146,8 +152,18 @@ const AgentDashboard = () => {
     );
   }
 
+  const agentOnboardingSteps: OnboardingStep[] = [
+    { title: 'Bem-vindo, Agente!', description: 'Como agente, você é o responsável por manter as informações dos ATMs actualizadas. Quanto mais fiável for a sua informação, mais utilizadores subscrevem e mais você ganha.', icon: <HandCoins className="h-8 w-8 text-primary" /> },
+    { title: 'As suas Zonas', description: 'Aqui vê as zonas que lhe foram atribuídas e os ATMs de cada uma. Actualize o estado regularmente para atrair mais utilizadores.', icon: <MapPin className="h-8 w-8 text-primary" /> },
+    { title: 'Como ganhar dinheiro', description: 'Recebe uma percentagem de cada subscrição na sua zona. O valor disponível aparece no topo. Quanto mais ATMs activos e informação recente, mais subscrições atrai.', icon: <TrendingUp className="h-8 w-8 text-primary" /> },
+    { title: 'Link de Referência', description: 'Partilhe o seu link de referência! Quando alguém subscreve com o seu código, o utilizador recebe desconto e você ganha comissão extra. Copie e envie nas redes sociais.', icon: <Link2 className="h-8 w-8 text-primary" /> },
+    { title: 'Levantamentos', description: 'Quando o saldo estiver disponível (após expiração da subscrição), solicite o levantamento. Certifique-se de que o IBAN está preenchido no seu perfil.', icon: <CreditCard className="h-8 w-8 text-primary" /> },
+    { title: 'Avaliação', description: 'Os utilizadores avaliam a fiabilidade da sua informação. Mantenha um bom score para atrair mais subscrições.', icon: <Star className="h-8 w-8 text-primary" /> },
+  ];
+
   return (
     <DashboardLayout title="Meu Painel" subtitle="Painel do Agente">
+      <OnboardingGuide storageKey="onboarding_seen_agent" steps={agentOnboardingSteps} />
       <DashboardHint role="agent" />
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-3 mb-6">
