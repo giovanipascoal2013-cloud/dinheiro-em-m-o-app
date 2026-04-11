@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, User, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, User, MapPin, Phone, BookOpen } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
@@ -15,7 +15,7 @@ const PROVINCIAS_ANGOLA = [
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAgent } = useAuth();
+  const { user, isAgent, isSupervisor } = useAuth();
   const [nome, setNome] = useState('');
   const [provincia, setProvincia] = useState('');
   const [cidade, setCidade] = useState('');
@@ -147,6 +147,22 @@ const Profile = () => {
                 </div>
               </>
             )}
+
+            <div className="border-t border-border/50 pt-4 mt-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const key = isAgent ? 'onboarding_seen_agent' : (isSupervisor ? 'onboarding_seen_supervisor' : 'onboarding_seen_user');
+                  const dest = isAgent ? '/agent' : (isSupervisor ? '/dashboard' : '/');
+                  localStorage.removeItem(key);
+                  navigate(dest);
+                }}
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Rever guia de introdução
+              </Button>
+            </div>
 
             <Button variant="hero" size="lg" className="w-full mt-2" onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-4 w-4 mr-2" />Guardar alterações</>}
