@@ -1,97 +1,115 @@
 
 
-## Plano: Sistema de Avaliação de Agentes + Painel de Análise
+## Plano: Onboarding Guiado por Cargo + Notificações Automáticas
 
 ### Contexto
-Utilizadores subscritos precisam avaliar a fiabilidade do agente que gere uma zona. Supervisores/admins precisam de um painel para analisar o desempenho dos agentes (qualidade de informação e frequência de actualização).
+Actualmente não existe onboarding guiado — utilizadores, agentes e supervisores são largados nas suas páginas sem orientação. Além disso, eventos críticos (nova subscrição, subscrição pendente, pedido de levantamento) não geram notificações para as partes interessadas.
 
-### Parte 1 — Base de dados
+---
 
-**Nova tabela `agent_ratings`:**
-```sql
-CREATE TABLE public.agent_ratings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  agent_id uuid NOT NULL,
-  zone_id uuid NOT NULL,
-  value smallint NOT NULL CHECK (value IN (0, 1)), -- 0=dislike, 1=like
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (user_id, zone_id) -- 1 voto por zona por utilizador
-);
-```
-- RLS: utilizadores autenticados podem inserir (para si), selecionar os seus votos, admins/supervisors podem ver todos
-- Sem limite de 24h nesta fase (simplificação) — apenas 1 voto por zona, actualizável
+### Parte 1 — Componente de Onboarding (Tour/Guia Interactivo)
 
-**Habilitar realtime** na tabela `atms` (para rastrear `last_updated` nos analytics).
+**Novo ficheiro: `src/components/OnboardingGuide.tsx`**
 
-### Parte 2 — Widget de Avaliação na Zona (utilizador subscrito)
+Componente reutilizável que mostra um tour passo-a-passo na primeira visita. Usa `localStorage` para controlar se já foi visto (chave: `onboarding_seen_{role}`). Aparece como um modal/drawer com passos numerados, cada um com título, descrição e ícone.
 
-**Ficheiro: `src/pages/ZoneDetail.tsx`**
+**Lógica:** Se `localStorage.getItem('onboarding_seen_{role}')` não existe, mostrar o guia automaticamente. Botão "Pular" em cada passo e "Concluir" no último.
 
-Após a lista de ATMs (apenas para `subStatus === 'active'`), adicionar secção discreta:
-- Mostrar o nome do agente responsável (consultar `agent_zones` + `profiles`)
-- Usar o `RatingWidget` existente com contagem de likes/dislikes do agente naquela zona
-- Consultar voto do utilizador actual em `agent_ratings`
-- Ao votar: upsert em `agent_ratings` (user_id, zone_id)
-- Texto: "Como avalia a fiabilidade das informações desta zona?"
-- Não intrusivo: aparece no fundo da lista de ATMs, com design subtil
+---
 
-**Ficheiro: `src/components/RatingWidget.tsx`**
-- Ajustar variant `success` → verificar se existe no Button, senão usar classe custom
-- Componente já está pronto, apenas precisa de integração
+### Parte 2 — Conteúdo do Onboarding por Cargo
 
-### Parte 3 — Painel de Análise de Agentes (admin/supervisor)
+**Agente (aparece em `/agent`):**
+1. **Bem-vindo, Agente!** — "Como agente, você é o responsável por manter as informações dos ATMs actualizadas. Quanto mais fiável for a sua informação, mais utilizadores subscrevem e mais você ganha."
+2. **As suas Zonas** — "Aqui vê as zonas que lhe foram atribuídas e os ATMs de cada uma. Actualize o estado regularmente."
+3. **Como ganhar dinheiro** — "Recebe uma percentagem de cada subscrição na sua zona. O valor disponível aparece no topo. Quanto mais ATMs activos e informação recente, maior o preço e mais subscrições atrai."
+4. **Link de Referência** — "Partilhe o seu link de referência! Quando alguém subscreve com o seu código, o utilizador recebe desconto e você ganha comissão extra. Copie e envie nas redes sociais."
+5. **Levantamentos** — "Quando o saldo estiver disponível (após expiração da subscrição), solicite o levantamento. Certifique-se de que o IBAN está preenchido no seu perfil."
+6. **Avaliação** — "Os utilizadores avaliam a fiabilidade da sua informação. Mantenha um bom score para atrair mais subscrições."
 
-**Novo ficheiro: `src/pages/dashboard/AgentAnalytics.tsx`**
+**Supervisor (aparece em `/dashboard`):**
+1. **Bem-vindo, Supervisor!** — "Gere zonas, ATMs e agentes. O seu trabalho é garantir que a plataforma funciona bem e gera receita."
+2. **Gestão de Zonas e ATMs** — "Crie zonas em áreas com alta concentração de ATMs. Atribua agentes estrategicamente — agentes próximos respondem mais rápido."
+3. **Subscrições** — "Aprove subscrições pendentes rapidamente. Cada atraso é um utilizador que pode desistir e receita perdida."
+4. **Monitorização de Agentes** — "Use o painel de Análise de Agentes para verificar quem está activo e quem precisa de acompanhamento. Scores baixos indicam problemas."
+5. **Divulgação** — "Incentive os agentes a partilhar os links de referência. Mais divulgação = mais subscrições = mais receita para todos."
 
-Painel acessível via sidebar, que mostra para cada agente:
+**Utilizador (aparece em `/` após login):**
+1. **Bem-vindo ao Dinheiro em Mão!** — "Encontre ATMs com dinheiro perto de si, em tempo real."
+2. **Zonas** — "A informação está organizada por zonas. Cada zona cobre uma área geográfica com vários ATMs."
+3. **Mapa** — "Use a vista de mapa para encontrar zonas perto de si. Pode alternar entre grelha e mapa."
+4. **Como subscrever** — "Escolha uma zona, faça o pagamento por referência e aguarde a aprovação. Depois, veja o estado de todos os ATMs em tempo real."
+5. **Bónus de Referência** — "Tem um código de um agente? Use-o ao subscrever para ter desconto! Pode encontrar códigos nas redes sociais."
 
-1. **Score de reputação** — (likes / total votos) × 5, arredondado a 1 casa
-2. **Total likes / dislikes** — agregado de todas as zonas
-3. **Frequência de actualização** — conta quantas vezes o agente actualizou ATMs nos últimos 7/30 dias (via `atms.last_updated` cruzado com `agent_zones`)
-4. **Última actualização** — timestamp da última alteração feita pelo agente
-5. **Zonas geridas** — lista com score individual por zona
-6. **Alerta** — se score < 2.5, badge de aviso
+---
 
-Layout: tabela/lista com cards expansíveis por agente. Filtro por nome, zona, score.
+### Parte 3 — Notificações Automáticas de Eventos
 
-**Ficheiro: `src/components/DashboardLayout.tsx`**
-- Adicionar link "Análise Agentes" com ícone `BarChart3`, roles: `['admin', 'supervisor']`
+Actualmente a tabela `notifications` existe e é usada para notificar o utilizador (aprovação/rejeição). Falta notificar:
 
-**Ficheiro: `src/App.tsx`**
-- Nova rota `/dashboard/agent-analytics` protegida para admin/supervisor
+**3a. Agente notificado quando alguém subscreve a sua zona**
 
-### Parte 4 — Tracking de actividade do agente
+**Ficheiro: `src/components/PaymentModal.tsx`** (no `handleConfirmPayment`, após criar a subscrição com sucesso)
 
-Para calcular a frequência de actualizações, vamos usar os timestamps `last_updated` da tabela `atms`. Quando o agente actualiza um ATM, o `last_updated` é definido — cruzando com `agent_zones` sabemos quais ATMs pertencem a zonas do agente.
+- Consultar `agent_zones` para encontrar o `agent_id` daquela zona
+- Inserir notificação: *"Nova subscrição pendente na zona {nome}! Um utilizador subscreveu. Aguarde a aprovação pelo supervisor."*
 
-Adicionalmente, criar uma **tabela `agent_activity_log`** para registo mais granular:
-```sql
-CREATE TABLE public.agent_activity_log (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_id uuid NOT NULL,
-  atm_id uuid NOT NULL,
-  zone_id uuid NOT NULL,
-  action text NOT NULL DEFAULT 'update',
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-```
-- RLS: agentes inserem os seus, admins/supervisors lêem todos
-- Inserir um registo cada vez que o agente actualiza um ATM (no `AgentDashboard.tsx`, dentro de `handleUpdateAtm`)
+**3b. Admin/Supervisor notificado quando há subscrição pendente**
 
-### Ficheiros a criar/modificar
+**Ficheiro: `src/components/PaymentModal.tsx`** (mesmo local)
+
+- Consultar `user_roles` para encontrar todos os admins e supervisores
+- Inserir notificação para cada um: *"Nova subscrição pendente — {nome_utilizador} subscreveu a zona {nome_zona}. Aprove em Subscrições."*
+
+**3c. Financeiro notificado quando agente solicita levantamento**
+
+**Ficheiro: `src/components/WithdrawalModal.tsx`** (após insert do withdrawal com sucesso)
+
+- Consultar `user_roles` para encontrar todos os financeiros e admins
+- Inserir notificação: *"Novo pedido de levantamento de {valor} KZ do agente {nome}. Processe em Levantamentos."*
+
+**RLS:** A política actual de INSERT em `notifications` só permite admin/supervisor. Precisamos de uma nova policy ou usar uma abordagem diferente:
+- **Solução:** Criar uma database function `SECURITY DEFINER` chamada `notify_users_by_role(role, title, message)` que insere notificações para todos os utilizadores com aquele role, contornando RLS. Isto é seguro porque a função controla exactamente o que é inserido.
+
+---
+
+### Parte 4 — Exibição de Notificações
+
+**Novo ficheiro: `src/components/NotificationBell.tsx`**
+
+Ícone de sino no header/sidebar que mostra:
+- Badge com contagem de não lidas
+- Dropdown/popover com lista de notificações recentes
+- Marcar como lida ao clicar
+- Link para a acção relevante (ex: "Aprove em Subscrições" → link para `/dashboard/subscriptions`)
+
+**Ficheiros a modificar:**
+- `src/components/DashboardLayout.tsx` — adicionar `NotificationBell` no header
+- `src/components/Header.tsx` — adicionar `NotificationBell` para utilizadores logados
+
+---
+
+### Parte 5 — Integração do Onboarding
+
+**Ficheiros a modificar:**
+- `src/pages/AgentDashboard.tsx` — importar e renderizar `OnboardingGuide` com conteúdo de agente
+- `src/pages/Dashboard.tsx` — renderizar `OnboardingGuide` com conteúdo de supervisor
+- `src/pages/Index.tsx` — renderizar `OnboardingGuide` com conteúdo de utilizador (se logado e primeira vez)
+
+---
+
+### Resumo de ficheiros
 
 | Ficheiro | Alteração |
 |---|---|
-| BD (migration) | Criar `agent_ratings` e `agent_activity_log` com RLS |
-| `src/pages/ZoneDetail.tsx` | Adicionar widget de avaliação para subscritos |
-| `src/pages/dashboard/AgentAnalytics.tsx` | **Criar** — painel de análise |
-| `src/pages/AgentDashboard.tsx` | Registar actividade no log ao actualizar ATM |
-| `src/components/DashboardLayout.tsx` | Adicionar link na sidebar |
-| `src/App.tsx` | Adicionar rota protegida |
-
-### Notas de design
-- Widget de avaliação é discreto: aparece abaixo dos ATMs, sem popup
-- Painel de analytics usa cards com métricas visuais (barras de progresso, badges coloridos)
-- Alerta vermelho automático se score de agente cai abaixo de 2.5
+| BD (migration) | Criar função `notify_users_by_role` SECURITY DEFINER |
+| `src/components/OnboardingGuide.tsx` | **Criar** — componente de tour por passos |
+| `src/components/NotificationBell.tsx` | **Criar** — ícone com dropdown de notificações |
+| `src/components/PaymentModal.tsx` | Notificar agente + admins/supervisores na nova subscrição |
+| `src/components/WithdrawalModal.tsx` | Notificar financeiros + admins no pedido de levantamento |
+| `src/pages/AgentDashboard.tsx` | Adicionar onboarding de agente |
+| `src/pages/Dashboard.tsx` | Adicionar onboarding de supervisor |
+| `src/pages/Index.tsx` | Adicionar onboarding de utilizador |
+| `src/components/DashboardLayout.tsx` | Adicionar NotificationBell |
+| `src/components/Header.tsx` | Adicionar NotificationBell |
 
