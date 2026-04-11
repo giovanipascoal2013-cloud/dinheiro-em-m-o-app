@@ -148,6 +148,22 @@ const Profile = () => {
               </>
             )}
 
+            <div className="border-t border-border/50 pt-4 mt-2">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const key = isAgent ? 'onboarding_seen_agent' : (isSupervisor ? 'onboarding_seen_supervisor' : 'onboarding_seen_user');
+                  const dest = isAgent ? '/agent' : (isSupervisor ? '/dashboard' : '/');
+                  localStorage.removeItem(key);
+                  navigate(dest);
+                }}
+              >
+                <BookOpen className="h-4 w-4 mr-2" />
+                Rever guia de introdução
+              </Button>
+            </div>
+
             <Button variant="hero" size="lg" className="w-full mt-2" onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="h-4 w-4 mr-2" />Guardar alterações</>}
             </Button>
