@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import logoIcon from '@/assets/logo-icon.png';
 import { toast } from '@/hooks/use-toast';
+import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/hooks/useAuth';
 
 export function Header() {
@@ -74,6 +75,7 @@ export function Header() {
           <div className="flex items-center gap-2">
             {isLoggedIn ? (
               <div className="flex items-center gap-2">
+                <NotificationBell />
                 <Link
                   to="/profile"
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
