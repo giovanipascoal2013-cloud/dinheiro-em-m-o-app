@@ -15,7 +15,7 @@ const PROVINCIAS_ANGOLA = [
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, isAgent } = useAuth();
+  const { user, isAgent, isSupervisor } = useAuth();
   const [nome, setNome] = useState('');
   const [provincia, setProvincia] = useState('');
   const [cidade, setCidade] = useState('');
