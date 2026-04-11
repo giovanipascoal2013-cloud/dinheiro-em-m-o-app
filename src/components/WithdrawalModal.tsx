@@ -80,6 +80,21 @@ export function WithdrawalModal({ isOpen, onClose, availableBalance, onSuccess }
 
       if (error) throw error;
 
+      // Notify financeiro and admins
+      const agentName = titular || 'Agente';
+      await supabase.rpc('notify_users_by_role', {
+        _role: 'financeiro',
+        _title: 'Novo pedido de levantamento',
+        _message: `Pedido de levantamento de ${Math.round(amountNum).toLocaleString()} KZ do agente ${agentName}. Processe em Levantamentos.`,
+        _type: 'withdrawal',
+      });
+      await supabase.rpc('notify_users_by_role', {
+        _role: 'admin',
+        _title: 'Novo pedido de levantamento',
+        _message: `Pedido de levantamento de ${Math.round(amountNum).toLocaleString()} KZ do agente ${agentName}. Processe em Levantamentos.`,
+        _type: 'withdrawal',
+      });
+
       setStep('success');
       toast({ title: 'Solicitação enviada', description: 'O administrador irá processar o seu levantamento.' });
     } catch (err: any) {

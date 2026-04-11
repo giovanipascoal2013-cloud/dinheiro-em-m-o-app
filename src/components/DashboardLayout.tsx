@@ -16,6 +16,7 @@ import {
   BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from '@/components/NotificationBell';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import logoIcon from '@/assets/logo-icon.png';
@@ -169,6 +170,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                 )}
               </div>
             </div>
+            <NotificationBell />
           </div>
         </header>
 

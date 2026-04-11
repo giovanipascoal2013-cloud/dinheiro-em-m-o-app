@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Search, MapPin, SlidersHorizontal, X, Map, LayoutGrid } from 'lucide-react';
+import { Search, MapPin, SlidersHorizontal, X, Map, LayoutGrid, Banknote, CreditCard, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { DashboardHint } from '@/components/DashboardHint';
@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePricePerAtm } from '@/hooks/usePricePerAtm';
 import logoIcon from '@/assets/logo-icon.png';
 import { Footer } from '@/components/Footer';
+import { OnboardingGuide, OnboardingStep } from '@/components/OnboardingGuide';
 
 const sortOptions = [
   { value: 'proximity', label: 'Mais perto' },
@@ -130,9 +131,18 @@ const Index = () => {
     navigate(`/zone/${zoneId}`);
   };
 
+  const userOnboardingSteps: OnboardingStep[] = [
+    { title: 'Bem-vindo ao Dinheiro em Mão!', description: 'Encontre ATMs com dinheiro perto de si, em tempo real. Informações actualizadas por agentes locais.', icon: <Banknote className="h-8 w-8 text-primary" /> },
+    { title: 'Zonas', description: 'A informação está organizada por zonas. Cada zona cobre uma área geográfica com vários ATMs verificados.', icon: <MapPin className="h-8 w-8 text-primary" /> },
+    { title: 'Mapa Interactivo', description: 'Use a vista de mapa para encontrar zonas perto de si. Pode alternar entre grelha e mapa no topo da página.', icon: <Map className="h-8 w-8 text-primary" /> },
+    { title: 'Como subscrever', description: 'Escolha uma zona, faça o pagamento por referência e aguarde a aprovação. Depois, veja o estado de todos os ATMs em tempo real.', icon: <CreditCard className="h-8 w-8 text-primary" /> },
+    { title: 'Bónus de Referência', description: 'Tem um código de um agente? Use-o ao subscrever para ter desconto! Pode encontrar códigos nas redes sociais dos nossos agentes.', icon: <Gift className="h-8 w-8 text-primary" /> },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      {user && <OnboardingGuide storageKey="onboarding_seen_user" steps={userOnboardingSteps} />}
 
       {/* Hero section */}
       <section className="relative overflow-hidden">

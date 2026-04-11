@@ -152,6 +152,36 @@ export function PaymentModal({ zone, isOpen, onClose, onSuccess, initialRefCode 
       // Clear persisted reference after successful submission
       localStorage.removeItem(`payment_ref_${zone.id}`);
 
+      // Notify agent of this zone
+      const { data: agentZone } = await supabase
+        .from('agent_zones')
+        .select('agent_id')
+        .eq('zone_id', zone.id)
+        .maybeSingle();
+
+      if (agentZone) {
+        await supabase.rpc('notify_user', {
+          _user_id: agentZone.agent_id,
+          _title: 'Nova subscrição na sua zona!',
+          _message: `Um utilizador subscreveu a zona ${zone.name}. Aguarde a aprovação pelo supervisor.`,
+          _type: 'subscription',
+        });
+      }
+
+      // Notify admins and supervisors
+      await supabase.rpc('notify_users_by_role', {
+        _role: 'admin',
+        _title: 'Nova subscrição pendente',
+        _message: `Nova subscrição pendente na zona ${zone.name}. Aprove em Subscrições.`,
+        _type: 'subscription',
+      });
+      await supabase.rpc('notify_users_by_role', {
+        _role: 'supervisor',
+        _title: 'Nova subscrição pendente',
+        _message: `Nova subscrição pendente na zona ${zone.name}. Aprove em Subscrições.`,
+        _type: 'subscription',
+      });
+
       setStep('pending');
     } catch (err: any) {
       console.error('Payment confirmation error:', err);

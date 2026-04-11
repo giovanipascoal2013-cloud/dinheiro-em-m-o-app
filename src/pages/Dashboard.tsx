@@ -8,10 +8,14 @@ import {
   XCircle,
   AlertCircle,
   Plus,
-  Eye
+  Eye,
+  BarChart3,
+  ClipboardCheck,
+  Megaphone
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { DashboardHint } from '@/components/DashboardHint';
+import { OnboardingGuide, OnboardingStep } from '@/components/OnboardingGuide';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -90,11 +94,20 @@ export default function Dashboard() {
 
   const roleLabel = isAdmin ? 'Administrador' : isSupervisor ? 'Supervisor' : 'Agente';
 
+  const supervisorOnboardingSteps: OnboardingStep[] = [
+    { title: 'Bem-vindo, Supervisor!', description: 'Gere zonas, ATMs e agentes. O seu trabalho é garantir que a plataforma funciona bem e gera receita para todos.', icon: <BarChart3 className="h-8 w-8 text-primary" /> },
+    { title: 'Gestão de Zonas e ATMs', description: 'Crie zonas em áreas com alta concentração de ATMs. Atribua agentes estrategicamente — agentes próximos respondem mais rápido.', icon: <MapPin className="h-8 w-8 text-primary" /> },
+    { title: 'Subscrições', description: 'Aprove subscrições pendentes rapidamente. Cada atraso é um utilizador que pode desistir e receita perdida.', icon: <ClipboardCheck className="h-8 w-8 text-primary" /> },
+    { title: 'Monitorização de Agentes', description: 'Use o painel de Análise de Agentes para verificar quem está activo e quem precisa de acompanhamento. Scores baixos indicam problemas.', icon: <Users className="h-8 w-8 text-primary" /> },
+    { title: 'Divulgação', description: 'Incentive os agentes a partilhar os links de referência. Mais divulgação = mais subscrições = mais receita para todos.', icon: <Megaphone className="h-8 w-8 text-primary" /> },
+  ];
+
   return (
     <DashboardLayout 
       title={`Olá, ${profile?.nome?.split(' ')[0] || 'Utilizador'}!`}
       subtitle={`Painel de ${roleLabel}`}
     >
+      <OnboardingGuide storageKey={`onboarding_seen_${isAdmin ? 'admin' : 'supervisor'}`} steps={supervisorOnboardingSteps} />
       <DashboardHint role={isAdmin ? 'admin' : 'supervisor'} />
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

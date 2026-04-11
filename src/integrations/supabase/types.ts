@@ -482,6 +482,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      notify_user: {
+        Args: {
+          _message: string
+          _title: string
+          _type?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
+      notify_users_by_role: {
+        Args: {
+          _message: string
+          _role: Database["public"]["Enums"]["app_role"]
+          _title: string
+          _type?: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "supervisor" | "agent" | "user" | "financeiro"
