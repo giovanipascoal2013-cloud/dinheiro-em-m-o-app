@@ -6,10 +6,6 @@ import {
   HandCoins, Link2, Star, CreditCard, TrendingUp
 } from 'lucide-react';
 import { OnboardingGuide, OnboardingStep } from '@/components/OnboardingGuide';
-import { usePlatformMargin } from '@/hooks/usePlatformMargin';
-import { 
-  MapPin, Wallet, Banknote, Users, Clock, Loader2, FileText, AlertTriangle, Eye, EyeOff
-} from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { DashboardHint } from '@/components/DashboardHint';
 import { ReferralShare } from '@/components/ReferralShare';

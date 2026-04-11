@@ -16,8 +16,6 @@ import {
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { DashboardHint } from '@/components/DashboardHint';
 import { OnboardingGuide, OnboardingStep } from '@/components/OnboardingGuide';
-import { DashboardLayout } from '@/components/DashboardLayout';
-import { DashboardHint } from '@/components/DashboardHint';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
