@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, User, MapPin, Phone } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, User, MapPin, Phone, BookOpen } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
