@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import logoIcon from '@/assets/logo-icon.png';
 import { Footer } from '@/components/Footer';
+import { AccountTypeSelector, AccountType } from '@/components/AccountTypeSelector';
 
 type AuthMode = 'login' | 'register';
 type LoginMethod = 'phone' | 'email';
@@ -32,6 +33,7 @@ const Auth = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showForgot, setShowForgot] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
+  const [accountType, setAccountType] = useState<AccountType>('user');
 
   const redirectByRole = async (userId: string) => {
     // Check for redirect param (e.g. from zone subscribe without login)
@@ -178,6 +180,7 @@ const Auth = () => {
               nome: nome.trim(),
               provincia: provincia || null,
               cidade: cidade.trim() || null,
+              account_type: accountType,
             },
           },
         });
@@ -242,6 +245,11 @@ const Auth = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Account type selector (register only) */}
+            {mode === 'register' && (
+              <AccountTypeSelector value={accountType} onChange={setAccountType} />
+            )}
+
             {/* Login method toggle */}
             <div className="flex rounded-xl bg-card border border-border overflow-hidden">
               <button

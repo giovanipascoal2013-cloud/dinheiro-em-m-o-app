@@ -26,6 +26,11 @@ import FinanceDashboard from "./pages/FinanceDashboard";
 import Profile from "./pages/Profile";
 import About from "./pages/About";
 import Terms from "./pages/Terms";
+import AgentOnboarding from "./pages/agent/Onboarding";
+import RegisterATM from "./pages/agent/RegisterATM";
+import AgentPending from "./pages/agent/Pending";
+import PendingATMs from "./pages/dashboard/PendingATMs";
+import { AgentOnboardingGate } from "@/components/AgentOnboardingGate";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -59,6 +64,11 @@ const App = () => (
             <Route path="/dashboard/atms" element={
               <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
                 <ATMsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/dashboard/atms/pending" element={
+              <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+                <PendingATMs />
               </ProtectedRoute>
             } />
             <Route path="/dashboard/assignments" element={
@@ -98,7 +108,30 @@ const App = () => (
             } />
             <Route path="/agent" element={
               <ProtectedRoute requiredRoles={['agent', 'admin', 'supervisor']}>
-                <AgentDashboard />
+                <AgentOnboardingGate>
+                  <AgentDashboard />
+                </AgentOnboardingGate>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/onboarding" element={
+              <ProtectedRoute requiredRoles={['agent', 'admin', 'supervisor']}>
+                <AgentOnboardingGate>
+                  <AgentOnboarding />
+                </AgentOnboardingGate>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/register-atm" element={
+              <ProtectedRoute requiredRoles={['agent', 'admin', 'supervisor']}>
+                <AgentOnboardingGate>
+                  <RegisterATM />
+                </AgentOnboardingGate>
+              </ProtectedRoute>
+            } />
+            <Route path="/agent/pending" element={
+              <ProtectedRoute requiredRoles={['agent', 'admin', 'supervisor']}>
+                <AgentOnboardingGate>
+                  <AgentPending />
+                </AgentOnboardingGate>
               </ProtectedRoute>
             } />
             <Route path="/finance" element={

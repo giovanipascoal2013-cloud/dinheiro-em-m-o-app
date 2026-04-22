@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Save, Loader2, User, MapPin, Phone, BookOpen } from 'lucide-react';
 import { Header } from '@/components/Header';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,8 @@ const PROVINCIAS_ANGOLA = [
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isSetup = searchParams.get('setup') === '1';
   const { user, isAgent, isSupervisor } = useAuth();
   const [nome, setNome] = useState('');
   const [provincia, setProvincia] = useState('');
@@ -58,6 +60,15 @@ const Profile = () => {
       toast({ title: 'Erro ao guardar', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Perfil actualizado!' });
+      // Mark agent onboarding profile step as complete when fields are present
+      if (isAgent && nome.trim() && provincia && cidade.trim()) {
+        await supabase.from('agent_onboarding_progress' as any)
+          .update({ profile_completed: true })
+          .eq('agent_id', user.id);
+        if (isSetup) {
+          navigate('/agent/register-atm', { replace: true });
+        }
+      }
     }
     setIsSaving(false);
   };
@@ -83,6 +94,14 @@ const Profile = () => {
       </div>
 
       <main className="container mx-auto px-4 pb-8 max-w-lg">
+        {isSetup && (
+          <div className="bg-primary/10 border border-primary/30 rounded-xl p-3 mb-4 text-sm text-foreground">
+            <p className="font-medium">Complete o seu perfil</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Preencha o seu nome, província, cidade {isAgent && 'e dados bancários'} para continuar.
+            </p>
+          </div>
+        )}
         <div className="bg-card rounded-2xl p-6 border border-border/50 shadow-card">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">

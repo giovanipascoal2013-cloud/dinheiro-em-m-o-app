@@ -58,7 +58,7 @@ const Index = () => {
   const fetchZones = async () => {
     const [zonesRes, atmsRes] = await Promise.all([
       supabase.from('zones').select('*').eq('status', 'active'),
-      supabase.from('atms').select('zone_id'),
+      supabase.from('atms').select('zone_id').eq('status_approval', 'approved'),
     ]);
 
     if (zonesRes.data) {

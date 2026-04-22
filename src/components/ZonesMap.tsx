@@ -83,7 +83,7 @@ export const ZonesMap: React.FC<ZonesMapProps> = ({ zones, subscribedZoneIds = n
 
   useEffect(() => {
     const fetchATMs = async () => {
-      const { data } = await supabase.from('atms').select('id, bank_name, address, latitude, longitude, has_cash, has_paper, status, cidade, fila, zone_id');
+      const { data } = await supabase.from('atms').select('id, bank_name, address, latitude, longitude, has_cash, has_paper, status, cidade, fila, zone_id').eq('status_approval', 'approved');
       if (data) setAtms(data as ATMMarkerData[]);
     };
     fetchATMs();

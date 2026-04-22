@@ -41,6 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_onboarding_progress: {
+        Row: {
+          agent_id: string
+          created_at: string
+          first_atm_approved: boolean
+          first_atm_submitted: boolean
+          id: string
+          onboarding_seen: boolean
+          pending_atm_id: string | null
+          profile_completed: boolean
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          first_atm_approved?: boolean
+          first_atm_submitted?: boolean
+          id?: string
+          onboarding_seen?: boolean
+          pending_atm_id?: string | null
+          profile_completed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          first_atm_approved?: boolean
+          first_atm_submitted?: boolean
+          id?: string
+          onboarding_seen?: boolean
+          pending_atm_id?: string | null
+          profile_completed?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       agent_ratings: {
         Row: {
           agent_id: string
@@ -114,8 +150,12 @@ export type Database = {
           latitude: number
           longitude: number
           obs: string | null
+          photo_url: string | null
           provincia: string | null
+          rejection_reason: string | null
           status: string | null
+          status_approval: string
+          submitted_by: string | null
           zone_id: string | null
         }
         Insert: {
@@ -131,8 +171,12 @@ export type Database = {
           latitude: number
           longitude: number
           obs?: string | null
+          photo_url?: string | null
           provincia?: string | null
+          rejection_reason?: string | null
           status?: string | null
+          status_approval?: string
+          submitted_by?: string | null
           zone_id?: string | null
         }
         Update: {
@@ -148,8 +192,12 @@ export type Database = {
           latitude?: number
           longitude?: number
           obs?: string | null
+          photo_url?: string | null
           provincia?: string | null
+          rejection_reason?: string | null
           status?: string | null
+          status_approval?: string
+          submitted_by?: string | null
           zone_id?: string | null
         }
         Relationships: [
@@ -474,6 +522,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_pending_atm: {
+        Args: {
+          _atm_id: string
+          _zone_id?: string
+          _zone_name?: string
+          _zone_price?: number
+        }
+        Returns: string
+      }
       generate_referral_code: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -498,6 +555,10 @@ export type Database = {
           _title: string
           _type?: string
         }
+        Returns: undefined
+      }
+      reject_pending_atm: {
+        Args: { _atm_id: string; _reason: string }
         Returns: undefined
       }
     }

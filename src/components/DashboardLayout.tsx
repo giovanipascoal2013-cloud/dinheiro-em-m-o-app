@@ -13,7 +13,8 @@ import {
   Wallet,
   ArrowLeftRight,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  Inbox
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
   { label: 'Painel Financeiro', href: '/finance', icon: TrendingUp, roles: ['financeiro'] },
   { label: 'Zonas', href: '/dashboard/zones', icon: MapPin, roles: ['admin', 'supervisor'] },
   { label: 'ATMs', href: '/dashboard/atms', icon: Banknote, roles: ['admin', 'supervisor'] },
+  { label: 'ATMs pendentes', href: '/dashboard/atms/pending', icon: Inbox, roles: ['admin', 'supervisor'] },
   { label: 'Atribuições', href: '/dashboard/assignments', icon: ArrowLeftRight, roles: ['admin', 'supervisor'] },
   { label: 'Subscrições', href: '/dashboard/subscriptions', icon: ClipboardCheck, roles: ['admin', 'supervisor', 'financeiro'] },
   { label: 'Levantamentos', href: '/dashboard/withdrawals', icon: Wallet, roles: ['admin', 'supervisor', 'financeiro'] },
