@@ -40,7 +40,8 @@ export function useAgentOnboarding() {
     }
 
     // Auto-detect profile completeness
-    if (data && !(data as any).profile_completed && profile?.nome && profile?.provincia && profile?.cidade) {
+    const p = profile as any;
+    if (data && !(data as any).profile_completed && p?.nome && p?.provincia && p?.cidade) {
       const { data: updated } = await supabase
         .from('agent_onboarding_progress' as any)
         .update({ profile_completed: true })
