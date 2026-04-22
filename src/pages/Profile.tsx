@@ -60,6 +60,15 @@ const Profile = () => {
       toast({ title: 'Erro ao guardar', description: error.message, variant: 'destructive' });
     } else {
       toast({ title: 'Perfil actualizado!' });
+      // Mark agent onboarding profile step as complete when fields are present
+      if (isAgent && nome.trim() && provincia && cidade.trim()) {
+        await supabase.from('agent_onboarding_progress' as any)
+          .update({ profile_completed: true })
+          .eq('agent_id', user.id);
+        if (isSetup) {
+          navigate('/agent/register-atm', { replace: true });
+        }
+      }
     }
     setIsSaving(false);
   };
