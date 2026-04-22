@@ -60,7 +60,7 @@ export default function ATMsPage() {
       agentZoneIds = agentZones?.map(az => az.zone_id) ?? [];
     }
 
-    let atmsQuery = supabase.from('atms').select('*').order('last_updated', { ascending: false });
+    let atmsQuery = supabase.from('atms').select('*').eq('status_approval', 'approved').order('last_updated', { ascending: false });
     if (agentZoneIds !== null && agentZoneIds.length > 0) {
       atmsQuery = atmsQuery.in('zone_id', agentZoneIds);
     } else if (agentZoneIds !== null && agentZoneIds.length === 0) {
