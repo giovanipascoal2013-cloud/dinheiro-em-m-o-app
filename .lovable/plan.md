@@ -1,145 +1,134 @@
 
 
-## Plano: Onboarding Guiado + Registo de ATM pelo Agente
+## Plano: Migrar backend para Supabase próprio + preparar frontend para Vercel
 
 ### Visão geral
 
-Reformular o fluxo de criação de conta para distinguir **Cliente** vs **Agente** desde o registo. Agentes recém-criados passam por um onboarding obrigatório, completam o perfil, registam pelo menos um ATM (com foto + GPS) e só acedem ao Dashboard após aprovação. Clientes recebem um onboarding opcional que sugere subscrição.
+Hoje o projecto corre sobre **Lovable Cloud** (que internamente provisiona um projecto Supabase gerido pela Lovable: ref `cycbvqmngcrhzuvqyvkb`). Quer agora:
+
+1. Mover todo o backend (DB + Auth + Storage + Edge Functions) para uma **conta Supabase própria**.
+2. Hospedar o frontend no **Vercel**.
+
+Importante: o que chamamos de "Lovable Cloud" **já é** Supabase por baixo. A migração consiste em recriar o mesmo schema, dados, funções e buckets num projecto Supabase que o utilizador controla, e depois apontar o frontend para esse novo projecto.
 
 ---
 
-### 1. Tela de Auth — Selecção de tipo de conta
+### Fase 1 — Criar e preparar o novo projecto Supabase (utilizador)
 
-No registo (`/auth`), adicionar **antes** do formulário um seletor com dois cartões:
-- **"Sou Cliente"** — quero consultar ATMs com dinheiro
-- **"Sou Agente"** — quero registar ATMs e ganhar dinheiro
+Passos manuais que só o utilizador pode executar (não tenho acesso à conta dele):
 
-A escolha grava a intenção (`account_type`) nos metadados do signup. No login esta secção não aparece.
+1. Criar conta em [supabase.com](https://supabase.com) (se ainda não tiver).
+2. Criar **novo projecto** — escolher região próxima (ex: `eu-west-2` Londres, mais perto de Angola que a default).
+3. Guardar:
+   - `Project URL` (ex: `https://xxxx.supabase.co`)
+   - `anon public key`
+   - `service_role key` (secreto)
+   - Password do Postgres
+4. Em **Authentication → Providers**: activar Email (e Google se quiser manter login social no futuro).
+5. Em **Authentication → URL Configuration**: adicionar os URLs do Vercel (ex: `https://dinheiroemmao.vercel.app`, `https://dinheiroemmao.com`) ao **Site URL** e **Redirect URLs**.
 
-### 2. Atribuição automática de role + perfil pendente
+### Fase 2 — Exportar schema, dados e código do projecto actual
 
-Após signup como agente:
-- Criar automaticamente o registo em `user_roles` com `role = 'agent'`
-- Criar registo em nova tabela `agent_onboarding_progress` para rastrear o estado: `profile_completed`, `first_atm_submitted`, `first_atm_approved`
+Eu trato disto a partir do projecto Lovable actual:
 
-### 3. Gating de navegação (novo `AgentOnboardingGate`)
+1. **Schema SQL completo** — gerar um único ficheiro `migrations/0001_initial_schema.sql` consolidando:
+   - Enum `app_role`
+   - Tabelas: `profiles`, `user_roles`, `zones`, `atms`, `agent_zones`, `agent_ratings`, `agent_activity_log`, `agent_onboarding_progress`, `subscriptions`, `transactions`, `withdrawals`, `referrals`, `notifications`, `platform_settings`
+   - Todas as RLS policies já mapeadas no contexto
+   - Funções: `has_role`, `handle_new_user`, `notify_user`, `notify_users_by_role`, `generate_referral_code`, `update_updated_at_column`, `approve_pending_atm`, `reject_pending_atm`
+   - Trigger `on_auth_user_created` em `auth.users` → `handle_new_user`
+   - Bucket de storage `atm-photos` + policies
 
-Componente que envolve `/agent` e bloqueia acesso enquanto o agente não completou o fluxo. Sempre que o agente faz login, é redirecionado para o passo onde parou:
+2. **Dados existentes** — exportar via `pg_dump --data-only` (preview/staging primeiro, depois produção).
 
-```text
-[Cria conta agente]
-       ↓
-[Onboarding ilustrado] ← obrigatório, primeira vez
-       ↓
-[/profile/setup] → preencher Nome, Província, Cidade, IBAN
-       ↓
-[/agent/register-atm] → tirar foto + GPS + dados
-       ↓
-[/agent/pending] → aguardar aprovação
-       ↓
-[/agent] (Dashboard desbloqueado)
+3. **Edge Functions** — copiar `supabase/functions/admin-reset-password`, `create-test-users`, `process-payment` para o novo projecto.
+
+4. **Secrets das edge functions** — listar quais terão de ser recriados no novo projecto (`SUPABASE_SERVICE_ROLE_KEY`, `LOVABLE_API_KEY`, etc.).
+
+### Fase 3 — Importar para o novo Supabase
+
+Instruções passo-a-passo que vou gerar para o utilizador correr localmente (precisa do **Supabase CLI**):
+
+```bash
+# 1. Login
+npx supabase login
+
+# 2. Apontar a um novo projecto
+npx supabase link --project-ref <NOVO_REF>
+
+# 3. Aplicar schema
+npx supabase db push   # usa as migrations do repo
+
+# 4. Importar dados
+psql "postgresql://postgres:<PASS>@db.<NOVO_REF>.supabase.co:5432/postgres" -f data_dump.sql
+
+# 5. Deploy edge functions
+npx supabase functions deploy process-payment
+npx supabase functions deploy admin-reset-password
+npx supabase functions deploy create-test-users
+
+# 6. Definir secrets das edge functions
+npx supabase secrets set LOVABLE_API_KEY=... (se ainda for usado)
 ```
 
-### 4. Onboarding ilustrado do Agente (8 passos)
+Vou também documentar como recriar o bucket `atm-photos` (privado) caso o `db push` não cubra storage.
 
-Substituir o `OnboardingGuide` existente por uma versão obrigatória e mais rica para agentes:
+### Fase 4 — Adaptar o código do frontend
 
-1. **Bem-vindo, Agente** — o que é ser agente na plataforma
-2. **Como ganha dinheiro** — comissão por subscrição na sua zona
-3. **Bónus e referências** — link de partilha gera comissão extra
-4. **Partilhar zonas** — flyers automáticos com QR
-5. **Registar o seu primeiro ATM** — explica que precisa estar fisicamente em frente ao ATM
-6. **Foto cronometrada** — tem 2 minutos para tirar a foto a partir da câmara (não galeria)
-7. **GPS obrigatório** — dispositivo deve permitir localização
-8. **Aprovação** — admin valida e cria a zona com o ATM
+O cliente Supabase actual lê de `import.meta.env.VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`. Não preciso reescrever `client.ts` — o ficheiro continua válido.
 
-Botão "Começar registo" no final → leva a `/profile/setup`.
+Mudanças no repo:
 
-### 5. Nova página `/agent/register-atm`
+1. Criar **`.env.example`** documentando as 3 variáveis que o Vercel precisa.
+2. Criar **`.env.local`** (gitignored) para o utilizador testar localmente apontado ao novo Supabase.
+3. Adicionar **`vercel.json`** com SPA fallback para o React Router:
+   ```json
+   {
+     "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+   }
+   ```
+4. Confirmar que `package.json` tem `"build": "vite build"` (já tem) e que Vercel detecta automaticamente Vite.
+5. Remover referências hard-coded ao ref `cycbvqmngcrhzuvqyvkb` (busco e listo todas as ocorrências antes de mexer).
 
-Fluxo em 3 etapas (stepper):
+### Fase 5 — Deploy no Vercel (utilizador, com guia meu)
 
-**Etapa 1: Captura de foto**
-- Usar `<input type="file" accept="image/*" capture="environment">` para forçar câmara traseira (não galeria)
-- Iniciar timer de **2 minutos** ao entrar no ecrã. Ao expirar, reseta tudo e mostra "Tempo esgotado, recomece o processo"
-- Botão: "Tirar foto agora"
+1. `vercel login` ou via dashboard → "Import Git Repository".
+2. Framework preset: **Vite**.
+3. Definir **Environment Variables**:
+   - `VITE_SUPABASE_URL` = `https://<novo>.supabase.co`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = anon key novo
+   - `VITE_SUPABASE_PROJECT_ID` = `<novo-ref>`
+4. Build command: `npm run build` (auto), Output: `dist`.
+5. Após primeiro deploy: copiar URL do Vercel e voltar a Supabase → Auth → URL Configuration para adicionar à allowlist.
+6. Configurar domínio personalizado `dinheiroemmao.com` no Vercel (alterar DNS).
 
-**Etapa 2: GPS + Upload**
-- Imediatamente após a foto: `navigator.geolocation.getCurrentPosition()` com `enableHighAccuracy: true`
-- Se utilizador recusa → bloquear progresso com mensagem "Precisamos da sua localização para registar este ATM"
-- Upload da foto para Storage (`bucket: atm-photos`)
-- Reverse geocoding (Nominatim/OSM) para obter endereço auto-preenchido
+### Fase 6 — Validação
 
-**Etapa 3: Dados do ATM**
-- **Nome do ATM** (input livre, com placeholder "Ex: ATM BAI Kilamba, ATM BFA Bombeiros, ATM Keve Kikagil")
-- **Endereço** (auto-preenchido, editável)
-- **Coordenadas** (auto-preenchido, read-only com botão "Refazer GPS")
-- **Dinheiro** (toggle Sim/Não)
-- **Papel** (toggle Sim/Não)
-- **Observações** (textarea opcional)
-- Botão "Submeter para aprovação"
-
-Após submissão → tela `/agent/pending` com ilustração "Aguardando aprovação. Será notificado quando aprovado." Não consegue avançar até aprovação.
-
-### 6. Aprovação pelo Admin
-
-Nova secção em `/dashboard/atms` (ou novo separador `/dashboard/atms/pending`):
-- Lista de ATMs com `status = 'pending_approval'`
-- Cada item mostra foto, coordenadas, dados e o agente submissor
-- Acções: **Aprovar** (cria zona automaticamente OU permite atribuir a zona existente, e linka ao agente em `agent_zones`) ou **Rejeitar** (com motivo)
-- Ao aprovar → notificação ao agente via tabela `notifications`; gate destrava
-
-### 7. Onboarding de Cliente (opcional, 4 passos)
-
-Aparece na primeira visita a `/` após signup como cliente:
-1. **Bem-vindo** — o que é a plataforma
-2. **Encontrar zonas** — como pesquisar ATMs perto de si
-3. **Subscrever** — desbloquear info em tempo real por mês
-4. **Começar agora** com dois botões: **"Subscrever primeira zona"** (vai para `/`) e **"Mais tarde"** (fecha)
-
-Não bloqueante. Pode ser repetido a partir do botão "Rever guia" no Perfil.
-
-### 8. Migração de agentes existentes sem ATM/zona
-
-Job de migração: marcar todos os agentes existentes em `user_roles` que não têm linha em `agent_zones` com `agent_onboarding_progress.first_atm_submitted = false`. No próximo login serão submetidos ao mesmo gate e fluxo.
+Checklist que vou entregar:
+- [ ] Login com email funciona
+- [ ] Signup cria entrada em `profiles` e `user_roles` automaticamente (trigger)
+- [ ] Onboarding de agente carrega e progride
+- [ ] Upload de foto para `atm-photos` funciona
+- [ ] Aprovação de ATM cria zona e linka agente
+- [ ] Notificações em tempo real chegam
+- [ ] Edge functions respondem (`process-payment`, `admin-reset-password`)
 
 ---
 
-### Detalhes técnicos
+### Considerações importantes
 
-**Novas tabelas / colunas (migração SQL):**
+- **Lovable Cloud vs Supabase próprio**: ao migrar, perde a integração nativa do editor Lovable com o backend (ex: o painel "Cloud" deixa de mostrar dados do projecto novo). O editor continua a funcionar para mexer no código frontend, mas qualquer alteração de schema terá de ser feita por si via Supabase Studio ou CLI — eu deixo de poder aplicar migrações automaticamente.
+- **Dados em produção**: se já tem utilizadores/zonas/transacções reais em produção, o dump tem de ser feito no momento exacto do switch para minimizar perda. Posso preparar um runbook de cutover.
+- **Auth users**: o `auth.users` do Supabase actual também tem de ser exportado — precisa de `pg_dump` específico do schema `auth`. O Supabase Dashboard tem ferramenta de migração assistida em **Project Settings → General → Migrate project** que facilita isto entre dois projectos Supabase.
+- **`.gitignore`**: vou tirar `.env` do gitignore para que o `.env.example` (e opcionalmente um `.env.production` sem segredos) possa ser versionado. As chaves secretas continuam fora.
+- **Lovable Cloud**: assim que confirmar que o novo Supabase está estável, pode desactivar Lovable Cloud em **Connectors → Lovable Cloud → Disable**. Não é reversível por versão antiga.
 
-| Tabela | Mudança |
-|---|---|
-| `atms` | Adicionar `status_approval` (`pending`, `approved`, `rejected`), `submitted_by` (uuid), `photo_url` (text), `rejection_reason` (text) |
-| `agent_onboarding_progress` (nova) | `agent_id`, `onboarding_seen`, `profile_completed`, `first_atm_submitted`, `first_atm_approved`, timestamps |
-| Storage | Novo bucket `atm-photos` (privado, RLS: agente vê próprias, admin vê todas) |
+### O que vou entregar quando aprovar
 
-**RLS:**
-- Agentes podem `INSERT` em `atms` apenas com `status_approval = 'pending'` e `submitted_by = auth.uid()`
-- Listagem pública (`Anyone can view ATMs`) filtrada para mostrar apenas `status_approval = 'approved'`
-- Admins/Supervisores podem `UPDATE status_approval` e criar zonas
-- Bucket `atm-photos`: política de upload restrita a agentes; leitura para admin/supervisor + dono
-
-**Componentes novos:**
-- `src/components/AgentOnboardingGate.tsx` — verifica progresso e redireciona
-- `src/pages/agent/RegisterATM.tsx` — fluxo 3 etapas
-- `src/pages/agent/Pending.tsx` — ecrã de espera
-- `src/components/AccountTypeSelector.tsx` — cartões cliente/agente em `/auth`
-- `src/pages/dashboard/PendingATMs.tsx` — fila de aprovação
-- `src/components/PhotoCaptureStep.tsx`, `GpsStep.tsx`, `ATMDetailsStep.tsx`
-
-**Componentes a alterar:**
-- `Auth.tsx` — adicionar selector e gravar `account_type` em metadados; criar role automaticamente
-- `App.tsx` — envolver `/agent` com `AgentOnboardingGate`; novas rotas
-- `AgentDashboard.tsx` — desbloqueado só após aprovação
-- `Index.tsx` — onboarding cliente opcional
-- `OnboardingGuide.tsx` — suportar variante "obrigatória" (sem botão pular)
-- `handle_new_user` (DB function) — atribuir role agent automaticamente se metadata `account_type = 'agent'`
-
-**Geolocalização:** Browser API `getCurrentPosition` com `enableHighAccuracy: true, timeout: 15000`. Reverse geocode via Nominatim (já compatível com Leaflet usado no projecto).
-
-**Timer de 2 minutos:** `useEffect` com `setTimeout` que limpa estado e mostra toast ao expirar; cancela se utilizador completa antes.
-
-**Notificações:** usar função existente `notify_user(_user_id, _title, _message, _type)` quando ATM aprovado/rejeitado.
+1. `migrations/0001_initial_schema.sql` consolidado pronto para `supabase db push`.
+2. Script `scripts/export-data.sh` para dump dos dados actuais.
+3. `vercel.json` no repo.
+4. `.env.example` documentado.
+5. `docs/MIGRATION_GUIDE.md` com todos os comandos passo-a-passo (Supabase CLI + Vercel) em pt-AO.
+6. Lista de hard-codes a alterar (se houver).
 
